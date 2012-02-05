@@ -16,6 +16,14 @@ object Test extends App {
     println(f"$f%3.2f% discount included")
   }
 
+  def test3(z: Char, lzy: Boolean, str: String) = {
+    val lzyIndicator = if (lzy) "?" else ""
+    r"[a-$z]+$lzyIndicator" findFirstIn str match {
+      case Some(s) => println(s"matches '$s'")
+      case _ => println("no match found")
+    }
+  }
+  
   test1(1)
   test1(12)
   test1(123)
@@ -23,4 +31,8 @@ object Test extends App {
   test2(10.0f)
   test2(13.345f)
 
+  test3('z', true, "all lowercase letters a-z (lazy)")
+  test3('z', false, "all lowercase letters a-z (greedy)")
+  test3('t', false, "characters a-r (greedy)")
+  test3('s', false, "z")
 }

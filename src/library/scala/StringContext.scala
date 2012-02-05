@@ -7,7 +7,6 @@
 \*                                                                      */
 
 package scala
-
 import collection.mutable.ArrayBuffer
 
 /** A class to support string interpolation.
@@ -17,10 +16,10 @@ import collection.mutable.ArrayBuffer
  *  @param   parts  The parts that make up the interpolated string,
  *                  without the expressions that get inserted by interpolation.
  */
-case class StringContext(parts: String*) {
+case class StringContext(parts: String*) { 
 
   import StringContext._
-
+  
   /** Checks that the given arguments `args` number one less than the number
    *  of `parts` supplied to the enclosing `StringContext`.
    *  @param `args` The arguments to be checked.
@@ -54,6 +53,21 @@ case class StringContext(parts: String*) {
     bldr.toString
   }
 
+  /** The regex interpolator.
+   * 
+   *  It inserts its arguments between corresponding parts of the string context
+   *  and creates a regex.
+   *  It also treats standard escape sequences as defined in the Scala specification.
+   *  @param `args` The arguments to be inserted into the regex pattern.
+   *  @throws An `IllegalArgumentException`
+   *          if the number of `parts` in the enclosing `StringContext` does not exceed
+   *          the number of arguments `arg` by exactly 1.
+   *  @throws A `StringContext.InvalidEscapeException` if a `parts` string contains a backslash (`\`) character
+   *          that does not start a valid escape sequence.
+   *  @throws A `PatternSyntaxException` if a pattern is invalid.
+   */
+  def r(args: Any*) = new util.matching.Regex(s(args: _*))
+  
   /** The formatted string interpolator.
    * 
    *  It inserts its arguments between corresponding parts of the string context.
@@ -89,7 +103,7 @@ case class StringContext(parts: String*) {
     val bldr = new java.lang.StringBuilder
     val args1 = new ArrayBuffer[Any]
     def copyString(first: Boolean): Unit = {
-      val str = treatEscapes(pi.next)
+      val str = treatEscapes(pi.next.toString)
       var start = 0
       var idx = 0
       if (!first) {
