@@ -502,7 +502,7 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
       typeEnv(sClass) = env
       this.specializedClass((clazz, env0)) = sClass
 
-      val decls1                        = new Scope // declarations of the newly specialized class 'sClass'
+      val decls1                        = newScope  // declarations of the newly specialized class 'sClass'
       var oldClassTParams: List[Symbol] = Nil       // original unspecialized type parameters
       var newClassTParams: List[Symbol] = Nil       // unspecialized type parameters of 'specializedClass' (cloned)
 
@@ -1089,7 +1089,7 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
           if (tparams.nonEmpty) " (poly)" else "",
           clazz, parents1, phase)
         )
-        val newScope = new Scope(specializeClass(clazz, typeEnv(clazz)) ++ specialOverrides(clazz))
+        val newScope = newScopeWith(specializeClass(clazz, typeEnv(clazz)) ++ specialOverrides(clazz): _*)
         // If tparams.isEmpty, this is just the ClassInfoType.
         polyType(tparams, ClassInfoType(parents1, newScope, clazz))
       case _ =>
@@ -1711,8 +1711,7 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
 
   private def makeArguments(fun: Symbol, vparams: List[Symbol]): List[Tree] = (
     //! TODO: make sure the param types are seen from the right prefix
-    for ((tp, arg) <- fun.info.paramTypes zip vparams) yield
-      gen.maybeMkAsInstanceOf(Ident(arg), tp, arg.tpe)
+    map2(fun.info.paramTypes, vparams)((tp, arg) => gen.maybeMkAsInstanceOf(Ident(arg), tp, arg.tpe))
   )
   private def findSpec(tp: Type): Type = tp match {
     case TypeRef(pre, sym, _ :: _) => specializedType(tp)
