@@ -129,6 +129,19 @@ case class StringContext(parts: String*) {
     }
     bldr.toString format (args1: _*)
   }
+  
+  lazy val c: QuotationCtx = {
+    val clz = java.lang.Class.forName("scala.tools.nsc.QuotationContext", true, getClass.getClassLoader)
+    
+    val ctor = clz.getConstructors().head
+    ctor.newInstance(parts).asInstanceOf[QuotationCtx]
+  }
+}
+
+trait QuotationCtx {
+  import scala.reflect.mirror._
+  def apply(args: Any*): Tree
+  def unapplySeq(tree: Tree): Option[Seq[Any]]  
 }
 
 object StringContext {
