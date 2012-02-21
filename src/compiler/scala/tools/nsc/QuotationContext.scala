@@ -16,9 +16,13 @@ class QuotationContext(parts: String*) extends Global(new Settings) with scala.Q
 	  val file = new util.BatchSourceFile("<quotation>", code)
 	  val unit = new CompilationUnit(file)
 	  val prsr = new syntaxAnalyzer.UnitParser(unit, List())
-	    
-	  val tree = prsr.templateStatSeq(false)._2.head
-	    
+	  
+	  val trees = prsr.templateStatSeq(false)._2
+	  val tree = 
+	    if(trees.length == 1) trees.head
+	    else
+	      syntaxAnalyzer.global.Block(trees: _*)
+	  
 	  val importer = new QuotationImporter(quoteMap)
 	  return importer.importTree(tree).asInstanceOf[mirror.Tree]
 	} 
@@ -67,22 +71,28 @@ class QuotationContext(parts: String*) extends Global(new Settings) with scala.Q
     val from: syntaxAnalyzer.global.type = syntaxAnalyzer.global
       
     override def importTypeName(name: from.TypeName): mrr.TypeName =
-      quotations.get(name.toString) match {
-        case Some(t: mrr.TypeName) => t
-        case _ => super.importTypeName(name)
-      }
+      if (name == null) null
+      else
+        quotations.get(name.toString) match {
+          case Some(t: mrr.TypeName) => t
+          case _ => super.importTypeName(name)
+        }
         
-    override def importTermName(name: from.TermName): mrr.TermName =
-      quotations.get(name.toString) match {
-        case Some(t: mrr.TermName) => t
-        case _ => super.importTermName(name)
-      }
+    override def importTermName(name: from.TermName): mrr.TermName = 
+      if (name == null) null
+      else
+        quotations.get(name.toString) match {
+          case Some(t: mrr.TermName) => t
+          case _ => super.importTermName(name)
+        }
       
     override def importName(name: from.Name): mrr.Name = 
-	  quotations.get(name.toString) match {
-	    case Some(t: mrr.Name) => t
-	    case _ => super.importName(name)
-	  }
+      if (name == null) null
+      else
+	    quotations.get(name.toString) match {
+	      case Some(t: mrr.Name) => t
+	      case _ => super.importName(name)
+	    }
     
     //def importTreeList(trees: List[from.Tree]): List[mrr.Tree] = 
     //  trees flatMap {
@@ -245,18 +255,18 @@ object matcher {
    }
   
    def matchName(name: Name, pName: Name) = 
-     if (name.toString startsWith quotationPrefix)
-       Some(List((name.toString, pName)))
-     else if (name == pName)
+     if (name == pName)
        Some(List())
+     else if (name.toString startsWith quotationPrefix)
+       Some(List((name.toString, pName)))
      else
        None
       
    def matchImportSelectors(selectors: List[ImportSelector], pSelectors: List[ImportSelector]) = { 
      var matchOk = true
      val res = selectors zip pSelectors map {
-       case (ImportSelector(name, npos, rename, rpos), 
-             ImportSelector(pName, pNpos, pRename, pRpos)) if npos == pNpos && rpos == pRpos =>
+       case (ImportSelector(name, npos, rename, rpos),
+             ImportSelector(pName, pNpos, pRename, pRpos)) if rpos == pRpos =>
          mapResults(List(), matchName(name, pName), matchName(rename, pRename))      
        case _ =>
          matchOk = false
