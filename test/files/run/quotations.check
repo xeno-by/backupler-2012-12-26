@@ -1,0 +1,38 @@
+1.$plus(2)
+class A extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  def notNull(x: String) = x.$bang$eq(null);
+  val x = 42;
+  def checkLength(x: String) = if (x.length.$less$eq(15))
+    println("ok")
+  else
+    println("fail")
+}
+abstract trait A[T >: _root_.scala.Nothing <: T1, T2 >: _root_.scala.Nothing <: _root_.scala.Any] extends T3 with scala.ScalaObject {
+  def $init$() = {
+    ()
+  };
+  println("str".$plus(1))
+}
+{
+  import scala.reflect._;
+  object Test extends scala.ScalaObject {
+    def <init>() = {
+      super.<init>();
+      ()
+    };
+    def y(z: String) = println("Test ".$plus(z))
+  }
+}
+11; 2.$times(4)
+v = private val x = "x"; p = z; t = Int; body = z.$plus(x)
+rfl = reflect; clz = class A extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  def id(z: Int) = z
+}
