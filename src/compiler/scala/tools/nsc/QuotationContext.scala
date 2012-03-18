@@ -15,16 +15,30 @@ class QuotationContext(parts: String*) extends Global(new Settings) with scala.Q
 	try {
 	  val file = new util.BatchSourceFile("<quotation>", code)
 	  val unit = new CompilationUnit(file)
-	  val prsr = new syntaxAnalyzer.UnitParser(unit, List())
-	  
+	  var hasSyntaxErrors = false
+	  val prsr = new syntaxAnalyzer.UnitParser(unit, List()) { 
+	    override def syntaxError(offset: Int, msg: String, skipIt: Boolean) {
+	      super.syntaxError(offset, msg, skipIt)
+	      hasSyntaxErrors = true
+	    }
+	    
+	    override def incompleteInputError(msg: String) {
+	      super.incompleteInputError(msg)
+	      hasSyntaxErrors = true
+	    }
+	  }
+
 	  val trees = prsr.templateStatSeq(false)._2
-	  val tree = 
-	    if(trees.length == 1) trees.head
-	    else
-	      syntaxAnalyzer.global.Block(trees: _*)
+	  if(!hasSyntaxErrors)
+	  {
+	    val tree = 
+	      if(trees.length == 1) trees.head
+	      else
+	        syntaxAnalyzer.global.Block(trees: _*)
 	  
-	  val importer = new QuotationImporter(quoteMap)
-	  return importer.importTree(tree).asInstanceOf[mirror.Tree]
+	    val importer = new QuotationImporter(quoteMap)
+	    return importer.importTree(tree).asInstanceOf[mirror.Tree]
+	  }
 	} 
 	catch { case e => println (e.getMessage) }
 

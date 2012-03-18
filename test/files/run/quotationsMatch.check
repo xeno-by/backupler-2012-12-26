@@ -1,0 +1,60 @@
+x
+11; 2.$times(4)
+f
+x
+x
+Y
+C
+T2
+def y = "y"
+def <init>() = {
+  <init>(0);
+  ()
+}
+M
+def x() = "111"
+v
+2.$times(y).$minus(4)
+Int
+T
+println("in def")
+T
+Int
+Nothing; ScalaObject
+reflect
+T2
+s
+val x = "x"
+scala.Tuple2((x @ _), (y @ _))
+v1.$eq$eq(v2)
+println("match succedeed")
+2
+1
+x: Int
+println(x)
+x
+null
+x.$eq$eq(0)
+0
+y.$div(x)
+x
+1
+println("block")
+println("finally")
+new Exception()
+String
+String
+x
+unchecked
+x
+List
+Int
+Tlo
+Thi
+TQual
+TName
+scala.AnyRef {
+  val x = 1
+}
+T1
+T2

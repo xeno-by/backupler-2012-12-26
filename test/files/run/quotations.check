@@ -1,38 +1,164 @@
+y.$up(2)
 1.$plus(2)
-class A extends scala.ScalaObject {
+f(x)
+f(x, 1)
+x.Y
+x.Y
+class C extends scala.ScalaObject {
   def <init>() = {
     super.<init>();
     ()
   };
-  def notNull(x: String) = x.$bang$eq(null);
-  val x = 42;
-  def checkLength(x: String) = if (x.length.$less$eq(15))
-    println("ok")
-  else
-    println("fail")
+  <empty>
 }
-abstract trait A[T >: _root_.scala.Nothing <: T1, T2 >: _root_.scala.Nothing <: _root_.scala.Any] extends T3 with scala.ScalaObject {
-  def $init$() = {
+class C[T1 >: _root_.scala.Nothing <: _root_.scala.Any, T2 >: _root_.scala.Nothing <: _root_.scala.Any] extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
     ()
   };
-  println("str".$plus(1))
+  <empty>
 }
-{
-  import scala.reflect._;
-  object Test extends scala.ScalaObject {
-    def <init>() = {
-      super.<init>();
-      ()
-    };
-    def y(z: String) = println("Test ".$plus(z))
+class C extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  val x = 42
+}
+class C extends scala.ScalaObject {
+  <paramaccessor> private[this] val x: Int = _;
+  def <init>(x: Int) = {
+    super.<init>();
+    ()
+  };
+  def <init>() = {
+    <init>(0);
+    ()
   }
 }
-11; 2.$times(4)
-v = private val x = "x"; p = z; t = Int; body = z.$plus(x)
-rfl = reflect; clz = class A extends scala.ScalaObject {
+object M extends scala.ScalaObject {
   def <init>() = {
     super.<init>();
     ()
   };
-  def id(z: Int) = z
+  <empty>
 }
+object M extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  def x() = "111"
+}
+val v = 1
+val v = 2.$times(y).$minus(4)
+val v: Int = 1
+def x() = ()
+def x[T >: _root_.scala.Nothing <: ScalaObject]() = ()
+def id(y: Int) = y
+def x() = println("in def")
+class C[T >: _root_.scala.Nothing <: _root_.scala.Any] extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  <empty>
+}
+class C[List[Int >: _root_.scala.Nothing <: _root_.scala.Any] >: _root_.scala.Nothing <: _root_.scala.Any] extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  <empty>
+}
+class C[T >: Nothing <: ScalaObject] extends scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  <empty>
+}
+import scala.reflect._
+class C extends T2 with scala.ScalaObject {
+  def <init>() = {
+    super.<init>();
+    ()
+  };
+  <empty>
+}
+abstract trait T extends scala.AnyRef { s => 
+  <empty>
+}
+{
+  val x = "x";
+  val y = "y"
+}
+z match {
+  case scala.Tuple2(x, y) => ()
+}
+z match {
+  case scala.Tuple2(x, y) if x.$eq$eq(y) => ()
+}
+z match {
+  case scala.Tuple2(x, _) => println("match succedeed")
+}
+x match {
+  case (1| 2) => "ok"
+  case _ => "fail"
+}
+x match {
+  case List((1)*) => ()
+}
+((x: Int) => println(x))
+((x: Int) => println(x))
+x = null
+x = null
+if (x.$eq$eq(0))
+  0
+else
+  y.$div(x)
+if (x.$eq$eq(0))
+  0
+else
+  y.$div(x)
+if (x.$eq$eq(0))
+  0
+else
+  y.$div(x)
+x match {
+  case 1 => ()
+}
+return 1
+try {
+  println("block")
+} catch {
+  case (e @ _) => println(e)
+} finally println("finally")
+try {
+  println("block")
+} finally println("finally")
+throw new Exception()
+new String("s")
+(x: String)
+(x: String)
+f(x: @unchecked)
+f(x: @unchecked)
+(x: List[Int])
+(x: List[Int])
+abstract trait X[T >: Tlo <: _root_.scala.Any] extends scala.AnyRef {
+  <empty>
+}
+abstract trait X[T >: _root_.scala.Nothing <: Thi] extends scala.AnyRef {
+  <empty>
+}
+(x: TQual#TName)
+(x: TQual#TName)
+def f[T >: _root_.scala.Nothing <:  {
+  val x = 1
+}](): scala.Unit = ()
+(x: T1[_$1] forSome { 
+  <synthetic> type _$1 >: _root_.scala.Nothing <: _root_.scala.Any
+})
+(x: T1[_$1] forSome { 
+  <synthetic> type _$1 >: _root_.scala.Nothing <: T2
+})
