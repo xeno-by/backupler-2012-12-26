@@ -108,6 +108,8 @@ trait Contexts { self: Analyzer =>
     var imports: List[ImportInfo] = List()   // currently visible imports
     var openImplicits: List[(Type,Tree)] = List()   // types for which implicit arguments
                                              // are currently searched
+    var bannedImplicits: List[(Symbol,Tree)] = List() // implicit macros that failed to expand
+                                               // and were banned from subsequent implicit searches
     // for a named application block (Tree) the corresponding NamedApplyInfo
     var namedApplyBlockInfo: Option[(Tree, NamedApplyInfo)] = None
     var prefix: Type = NoPrefix
@@ -269,6 +271,7 @@ trait Contexts { self: Analyzer =>
       c.checking = this.checking
       c.retyping = this.retyping
       c.openImplicits = this.openImplicits
+      c.bannedImplicits = this.bannedImplicits
       c.buffer = if (this.buffer == null) LinkedHashSet[AbsTypeError]() else this.buffer // need to initialize
       registerContext(c.asInstanceOf[analyzer.Context])
       debuglog("[context] ++ " + c.unit + " / " + tree.summaryString)
@@ -319,6 +322,14 @@ trait Contexts { self: Analyzer =>
       val c = makeSilent(reportAmbiguousErrors)
       c.implicitsEnabled = false
       c.enrichmentEnabled = false
+      c
+    }
+
+    def makeMacroless = {
+      // [Eugene] creating new context breaks some tests
+//      val c = make(tree)
+      val c = this
+      c.macrosEnabled = false
       c
     }
 

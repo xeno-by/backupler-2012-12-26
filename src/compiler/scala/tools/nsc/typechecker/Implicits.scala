@@ -32,10 +32,10 @@ trait Implicits {
   import global.typer.{ printTyping, deindentTyping, indentTyping, printInference }
 
   def inferImplicit(tree: Tree, pt: Type, reportAmbiguous: Boolean, isView: Boolean, context: Context): SearchResult =
-    inferImplicit(tree, pt, reportAmbiguous, isView, context, true, NoPosition)
+    inferImplicit(tree, pt, reportAmbiguous, isView, context, true, tree.pos)
 
   def inferImplicit(tree: Tree, pt: Type, reportAmbiguous: Boolean, isView: Boolean, context: Context, saveAmbiguousDivergent: Boolean): SearchResult =
-    inferImplicit(tree, pt, reportAmbiguous, isView, context, saveAmbiguousDivergent, NoPosition)
+    inferImplicit(tree, pt, reportAmbiguous, isView, context, saveAmbiguousDivergent, tree.pos)
 
   /** Search for an implicit value. See the comment on `result` at the end of class `ImplicitSearch`
    *  for more info how the search is conducted.
@@ -77,7 +77,37 @@ trait Implicits {
     if (printInfers && !tree.isEmpty && !context.undetparams.isEmpty)
       printTyping("typing implicit: %s %s".format(tree, context.undetparamsString))
     val implicitSearchContext = context.makeImplicit(reportAmbiguous)
-    val result = new ImplicitSearch(tree, pt, isView, implicitSearchContext, pos).bestImplicit
+    def searchUntilDefinitiveResult: SearchResult = {
+      val result = new ImplicitSearch(tree, pt, isView, implicitSearchContext, pos).bestImplicit
+      // [Eugene] does this play well with the error reporting infrastructure?
+      if (result != SearchFailure && result.tree.exists(sub => sub.symbol != null && sub.symbol.isTermMacro) && context.macrosEnabled) {
+        def expandImplicitMacros() = {
+          val expanded = newTyper(context).silent(typer => macroExpandAll(typer, result.tree))
+          expanded match {
+            case SilentResultValue(expanded) =>
+              new SearchResult(expanded, result.subst)
+            case SilentTypeError(err) =>
+              if (settings.XlogImplicits.value)
+                reporter.echo(pos, result.tree+" is not a valid implicit value for "+pt+" because its macro expansion has failed:\n"+err.errPos+": "+err.errMsg)
+              implicitSearchContext.bannedImplicits = (result.tree.symbol, tree) :: implicitSearchContext.bannedImplicits
+              searchUntilDefinitiveResult
+          }
+        }
+
+        if (!context.reportErrors && !context.bufferErrors) {
+          // [Eugene] this is a dirty hack to make tag materialization macros expand in UnCurry
+          val saved = context.state
+          context.setBufferErrors
+          try expandImplicitMacros()
+          finally context.restoreState(saved)
+        } else {
+          expandImplicitMacros()
+        }
+      } else {
+        result
+      }
+    }
+    val result = searchUntilDefinitiveResult
     if (saveAmbiguousDivergent && implicitSearchContext.hasErrors) {
       context.updateBuffer(implicitSearchContext.errBuffer.filter(err => err.kind == ErrorKinds.Ambiguous || err.kind == ErrorKinds.Divergent))
       debugwarn("update buffer: " + implicitSearchContext.errBuffer)
@@ -283,7 +313,9 @@ trait Implicits {
    *                          If it's set to NoPosition, then position-based services will use `tree.pos`
    */
   class ImplicitSearch(tree: Tree, pt: Type, isView: Boolean, context0: Context, pos0: Position = NoPosition)
-    extends Typer(context0) with ImplicitsContextErrors {
+    // important! macros are prohibited from being expanded during implicit search
+    // instead, they will be delayed, and only the lucky winner, if any, will be expanded
+    extends Typer(context0.makeMacroless) with ImplicitsContextErrors {
       printTyping(
         ptBlock("new ImplicitSearch",
           "tree"        -> tree,
@@ -393,23 +425,26 @@ trait Implicits {
            //println("Pending implicit "+pending+" dominates "+pt+"/"+undetParams) //@MDEBUG
            throw DivergentImplicit
          case None =>
-           try {
-             context.openImplicits = (pt, tree) :: context.openImplicits
-             // println("  "*context.openImplicits.length+"typed implicit "+info+" for "+pt) //@MDEBUG
-             typedImplicit0(info, ptChecked)
-           } catch {
-             case ex: DivergentImplicit =>
-               //println("DivergentImplicit for pt:"+ pt +", open implicits:"+context.openImplicits) //@MDEBUG
-               if (context.openImplicits.tail.isEmpty) {
-                 if (!(pt.isErroneous))
-                   DivergingImplicitExpansionError(tree, pt, info.sym)(context)
-                 SearchFailure
-               } else {
-                 throw DivergentImplicit
-               }
-           } finally {
-             context.openImplicits = context.openImplicits.tail
-           }
+           if (info.sym.isTermMacro && openMacros.exists(context => context.currentMacro == info.sym))
+             SearchFailure
+           else
+             try {
+               context.openImplicits = (pt, tree) :: context.openImplicits
+               // println("  "*context.openImplicits.length+"typed implicit "+info+" for "+pt) //@MDEBUG
+               typedImplicit0(info, ptChecked)
+             } catch {
+               case ex: DivergentImplicit =>
+                 //println("DivergentImplicit for pt:"+ pt +", open implicits:"+context.openImplicits) //@MDEBUG
+                 if (context.openImplicits.tail.isEmpty) {
+                   if (!(pt.isErroneous))
+                     DivergingImplicitExpansionError(tree, pt, info.sym)(context)
+                   SearchFailure
+                 } else {
+                   throw DivergentImplicit
+                 }
+             } finally {
+               context.openImplicits = context.openImplicits.tail
+             }
        }
     }
 
@@ -580,8 +615,15 @@ trait Implicits {
         incCounter(typedImplicits)
 
         printTyping("typed implicit %s:%s, pt=%s".format(itree1, itree1.tpe, wildPt))
-        val itree2 = if (isView) (itree1: @unchecked) match { case Apply(fun, _) => fun }
+        var itree2 = if (isView) (itree1: @unchecked) match { case Apply(fun, _) => fun }
                      else adapt(itree1, EXPRmode, wildPt)
+        if (itree2.attachmentOpt[MacroAttachment].map(_.delayed).getOrElse(false)) {
+          itree2 =
+            if (wildPt.typeSymbol == UnitClass)
+              instantiateExpectingUnit(itree2, EXPRmode)
+            else
+              instantiate(itree2, EXPRmode, wildPt)
+        }
 
         printTyping("adapted implicit %s:%s to %s".format(
           itree1.symbol, itree2.tpe, wildPt)
@@ -633,6 +675,7 @@ trait Implicits {
               else {
                 val subst = new TreeTypeSubstituter(okParams, okArgs)
                 subst traverse itree2
+                notifyUndetparamsInferred(okParams, okArgs)
                 subst
               }
 
@@ -724,6 +767,12 @@ trait Implicits {
       comesBefore(sym, context.owner)
     }
 
+    /** Is this implicit macro banned from implicit search (because it has already failed to expand)? */
+    def isBanned(sym: Symbol) = (
+         sym.isTermMacro
+      && context.bannedImplicits.exists{ case (sym1, tree1) => tree == tree1 && sym == sym1 }
+    )
+
     /** Prune ImplicitInfos down to either all the eligible ones or the best one.
      *
      *  @param  iss       list of list of infos
@@ -740,7 +789,7 @@ trait Implicits {
            info.isCyclicOrErroneous
         || isView && isPredefMemberNamed(info.sym, nme.conforms)
         || isShadowed(info.name)
-        || (!context.macrosEnabled && info.sym.isTermMacro)
+        || isBanned(info.sym)
       )
 
       /** True if a given ImplicitInfo (already known isValid) is eligible.
@@ -1161,7 +1210,8 @@ trait Implicits {
       // todo. migrate hardcoded materialization in Implicits to corresponding implicit macros
       var materializer = atPos(pos.focus)(Apply(TypeApply(Ident(TagMaterializers(tagClass)), List(TypeTree(tp))), List(prefix)))
       if (settings.XlogImplicits.value) println("materializing requested %s.%s[%s] using %s".format(pre, tagClass.name, tp, materializer))
-      success(materializer)
+      if (isBanned(materializer.symbol)) failure(materializer, "materializer is banned")
+      else success(materializer)
     }
 
     /** The manifest corresponding to type `pt`, provided `pt` is an instance of Manifest.

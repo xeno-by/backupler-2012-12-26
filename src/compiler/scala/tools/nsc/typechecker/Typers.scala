@@ -821,7 +821,9 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
      *  (14) When in mode EXPRmode, apply a view
      *  If all this fails, error
      */
-    protected def adapt(tree: Tree, mode: Int, pt: Type, original: Tree = EmptyTree): Tree = {
+    // [Eugene] made this non-protected, because I need it in `macroExpand`
+    // I'm not sure whether this is a good idea, let's discuss this later
+    def adapt(tree: Tree, mode: Int, pt: Type, original: Tree = EmptyTree): Tree = {
 
       def adaptToImplicitMethod(mt: MethodType): Tree = {
         if (context.undetparams.nonEmpty) { // (9) -- should revisit dropped condition `(mode & POLYmode) == 0`
@@ -1082,10 +1084,10 @@ trait Typers extends Modes with Adaptations with PatMatVirtualiser {
           }
           if (tree.isType)
             adaptType()
-          else if (context.macrosEnabled &&                            // when macros are enabled
-                   inExprModeButNot(mode, FUNmode) && !tree.isDef &&   // and typechecking application
-                   tree.symbol != null && tree.symbol.isTermMacro)     // of a term macro
-            macroExpand(this, tree, pt)
+          else if (
+              inExprModeButNot(mode, FUNmode) && !tree.isDef &&   // typechecking application
+              tree.symbol != null && tree.symbol.isTermMacro)     // of a macro
+            macroExpand(this, tree, mode, pt)
           else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
             adaptConstrPattern()
           else if (inAllModes(mode, EXPRmode | FUNmode) &&

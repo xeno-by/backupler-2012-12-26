@@ -105,7 +105,7 @@ package internal {
                 if (ex.getClass.toString.endsWith("$ReificationError")) {
                   ex match {
                     case c.ReificationError(pos, msg) =>
-                      c.error(pos, msg)
+                      fail("%s: %s".format(pos, msg))
                       EmptyTree
                   }
                 } else if (ex.getClass.toString.endsWith("$UnexpectedReificationError")) {
