@@ -2539,11 +2539,12 @@ self =>
 
     /** {{{
      *  TypeDef ::= type Id [TypeParamClause] `=' Type
-     *            | FunSig `=' Expr
+     *            | type FunSig `=' `macro' Expr
      *  TypeDcl ::= type Id [TypeParamClause] TypeBounds
      *  }}}
      */
     def typeDefOrDcl(start: Int, mods: Modifiers): Tree = {
+      var newmods = mods
       in.nextToken()
       newLinesOpt()
       atPos(start, in.offset) {
@@ -2551,16 +2552,56 @@ self =>
         val isBackquoted = in.token == BACKQUOTED_IDENT
         val name = identForType()
         // @M! a type alias as well as an abstract type may declare type parameters
-        val tparams = typeParamClauseOpt(name, null)
+        // Eugene: type macros can have context bounds (see `funDefRest` for the info about context bounds)
+        val contextBoundBuf = new ListBuffer[Tree]
+        val tparams = typeParamClauseOpt(name, contextBoundBuf)
+        def parseTypeDef(rhs: Tree): TypeDef = {
+          if (contextBoundBuf.nonEmpty) syntaxError(nameOffset, "only type parameters of type macros can have context bounds", false)
+          TypeDef(newmods, name, tparams, rhs)
+        }
+        def parseTypeMacro(vparamss: List[List[ValDef]]): DefDef = {
+          newmods |= Flags.MACRO
+          val variantTparams = tparams filter (tparam => tparam.mods.hasFlag(Flags.COVARIANT) || tparam.mods.hasFlag(Flags.CONTRAVARIANT))
+          variantTparams foreach (tparam => syntaxError(tparam.pos, "type parameters of type macros cannot have variance annotations", false))
+          DefDef(newmods, name, tparams, vparamss, scalaUnitConstr, expr())
+        }
         in.token match {
           case EQUALS =>
-            in.nextToken()
-            TypeDef(mods, name, tparams, typ())
+            in.nextTokenAllow(nme.MACROkw)
+            if (settings.Xmacros.value && in.token == MACRO || // [Martin] Xmacros can be retired now
+                in.token == IDENTIFIER && in.name == nme.MACROkw) {
+              in.nextToken()
+              parseTypeMacro(Nil)
+            } else {
+              parseTypeDef(typ())
+            }
           case SUPERTYPE | SUBTYPE | SEMI | NEWLINE | NEWLINES | COMMA | RBRACE =>
-            TypeDef(mods | Flags.DEFERRED, name, tparams, typeBounds())
+            newmods |= Flags.DEFERRED
+            parseTypeDef(typeBounds())
           case _ =>
-            syntaxErrorOrIncomplete("`=', `>:', or `<:' expected", true)
-            EmptyTree
+            newLineOptWhenFollowedBy(LPAREN)
+            in.token match {
+              case LPAREN =>
+                val vparamss = paramClauses(name.toTermName, contextBoundBuf.toList, false)
+                in.token match {
+                  case EQUALS =>
+                    in.nextTokenAllow(nme.MACROkw)
+                    if (settings.Xmacros.value && in.token == MACRO || // [Martin] Xmacros can be retired now
+                        in.token == IDENTIFIER && in.name == nme.MACROkw) {
+                      in.nextToken()
+                      parseTypeMacro(vparamss)
+                    } else {
+                      syntaxErrorOrIncomplete("`macro' expected", true)
+                      EmptyTree
+                    }
+                  case _ =>
+                    syntaxErrorOrIncomplete("`=' expected", true)
+                    EmptyTree
+                }
+              case _ =>
+                syntaxErrorOrIncomplete("`=', `>:', or `<:' expected", true)
+                EmptyTree
+            }
         }
       }
     }
