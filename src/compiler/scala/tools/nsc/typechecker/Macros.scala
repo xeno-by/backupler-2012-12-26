@@ -636,9 +636,36 @@ trait Macros { self: Analyzer =>
    *  @return Some(runtime) if macro implementation can be loaded successfully from either of the mirrors,
    *          None otherwise.
    */
+  private val macroRuntimesCache = perRunCaches.newWeakMap[Symbol, Option[List[Any] => Any]]
+  private lazy val fastTrack: Map[Symbol, List[Any] => Any] = {
+    import scala.reflect.api.Universe
+    import scala.reflect.makro.internal._
+    Map( // challenge: how can we factor out the common code? Does not seem to be easy.
+      MacroInternal_materializeClassTag -> (args => {
+        assert(args.length == 3, args)
+        val c = args(0).asInstanceOf[MacroContext]
+        materializeClassTag_impl(c)(args(1).asInstanceOf[c.Expr[Universe]])(args(2).asInstanceOf[c.TypeTag[_]])
+      }),
+      MacroInternal_materializeTypeTag -> (args => {
+        assert(args.length == 3, args)
+        val c = args(0).asInstanceOf[MacroContext]
+        materializeTypeTag_impl(c)(args(1).asInstanceOf[c.Expr[Universe]])(args(2).asInstanceOf[c.TypeTag[_]])
+      }),
+      MacroInternal_materializeGroundTypeTag -> (args => {
+        assert(args.length == 3, args)
+        val c = args(0).asInstanceOf[MacroContext]
+        materializeGroundTypeTag_impl(c)(args(1).asInstanceOf[c.Expr[Universe]])(args(2).asInstanceOf[c.TypeTag[_]])
+      })
+    )
+  }
   private def macroRuntime(macroDef: Symbol): Option[List[Any] => Any] = {
     macroTrace("looking for macro implementation: ")(macroDef)
     macroTrace("macroDef is annotated with: ")(macroDef.annotations)
+
+    if (fastTrack contains macroDef) {
+      if (macroDebug) println("macro expansion serviced by a fast track")
+      return Some(fastTrack(macroDef))
+    }
 
     val ann = macroDef.getAnnotation(MacroImplAnnotation)
     if (ann == None) {
