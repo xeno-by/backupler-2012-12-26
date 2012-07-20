@@ -2034,10 +2034,6 @@ trait Typers extends Modes with Adaptations with Tags {
                meth.owner.isAnonOrRefinementClass))
             InvalidConstructorDefError(ddef)
           typed(ddef.rhs)
-        } else if (meth.isTermMacro) {
-          // typechecking macro bodies is sort of unconventional
-          // that's why we employ our custom typing scheme orchestrated outside of the typer
-          transformedOr(ddef.rhs, typedMacroBody(this, ddef))
         } else {
           transformedOrTyped(ddef.rhs, EXPRmode, tpt1.tpe)
         }
@@ -4510,7 +4506,7 @@ trait Typers extends Modes with Adaptations with Tags {
           assert(errorContainer == null, "Cannot set ambiguous error twice for identifier")
           errorContainer = tree
         }
-        
+
         val fingerPrint: Long = name.fingerPrint
 
         var defSym: Symbol = tree.symbol  // the directly found symbol
@@ -5356,34 +5352,6 @@ trait Typers extends Modes with Adaptations with Tags {
       val tpe = packedType(tree1, context.owner)
       checkExistentialsFeature(tree.pos, tpe, "inferred existential type")
       tpe
-    }
-
-    def computeMacroDefType(tree: Tree, pt: Type): Type = {
-      assert(context.owner.isTermMacro, context.owner)
-      assert(tree.symbol.isTermMacro, tree.symbol)
-      assert(tree.isInstanceOf[DefDef], tree.getClass)
-      val ddef = tree.asInstanceOf[DefDef]
-
-      val tree1 =
-        if (transformed contains ddef.rhs) {
-          // macro defs are typechecked in `methodSig` (by calling this method) in order to establish their link to macro implementation asap
-          // if a macro def doesn't have explicitly specified return type, this method will be called again by `assignTypeToTree`
-          // here we guard against this case
-          transformed(ddef.rhs)
-        } else {
-          val tree1 = typedMacroBody(this, ddef)
-          transformed(ddef.rhs) = tree1
-          tree1
-        }
-
-      val isMacroBodyOkay = !tree.symbol.isErroneous && !(tree1 exists (_.isErroneous))
-      val shouldInheritMacroImplReturnType = ddef.tpt.isEmpty
-      if (isMacroBodyOkay && shouldInheritMacroImplReturnType) computeMacroDefTypeFromMacroImpl(ddef, tree.symbol, tree1.symbol) else AnyClass.tpe
-    }
-
-    def transformedOr(tree: Tree, op: => Tree): Tree = transformed.get(tree) match {
-      case Some(tree1) => transformed -= tree; tree1
-      case None => op
     }
 
     def transformedOrTyped(tree: Tree, mode: Int, pt: Type): Tree = transformed.get(tree) match {

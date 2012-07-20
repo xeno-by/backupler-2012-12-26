@@ -2501,7 +2501,7 @@ self =>
      */
 
     /** {{{
-     *  FunDef ::= FunSig [`:' Type] `=' [`macro'] Expr
+     *  FunDef ::= FunSig [`:' Type] `=' Expr
      *          |  FunSig [nl] `{' Block `}'
      *          |  `this' ParamClause ParamClauses
      *                 (`=' ConstrExpr | [nl] ConstrBlock)
@@ -2549,15 +2549,7 @@ self =>
             restype = scalaUnitConstr
             blockExpr()
           } else {
-            if (in.token == EQUALS) {
-              in.nextTokenAllow(nme.MACROkw)
-              if (in.token == IDENTIFIER && in.name == nme.MACROkw) {
-                in.nextToken()
-                newmods |= Flags.MACRO
-              }
-            } else {
-              accept(EQUALS)
-            }
+            accept(EQUALS)
             expr()
           }
         DefDef(newmods, name, tparams, vparamss, restype, rhs)

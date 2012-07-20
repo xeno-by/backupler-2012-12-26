@@ -1157,7 +1157,6 @@ trait Scanners extends ScannersCommon {
     nme.SUPERTYPEkw -> SUPERTYPE,
     nme.HASHkw      -> HASH,
     nme.ATkw        -> AT,
-    nme.MACROkw     -> IDENTIFIER,
     nme.THENkw      -> IDENTIFIER)
 
   private var kwOffset: Int = -1

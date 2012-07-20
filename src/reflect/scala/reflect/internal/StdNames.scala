@@ -164,7 +164,6 @@ trait StdNames {
     final val IMPLICITkw: TermName  = kw("implicit")
     final val IMPORTkw: TermName    = kw("import")
     final val LAZYkw: TermName      = kw("lazy")
-    final val MACROkw: TermName     = kw("macro")
     final val MATCHkw: TermName     = kw("match")
     final val NEWkw: TermName       = kw("new")
     final val NULLkw: TermName      = kw("null")
@@ -350,8 +349,8 @@ trait StdNames {
     def isModuleName(name: Name)            = name endsWith MODULE_SUFFIX_NAME
 
     def isDeprecatedIdentifierName(name: Name) = name.toTermName match {
-      case nme.`then` | nme.`macro` => true
-      case _                        => false
+      case nme.`then` => true
+      case _          => false
     }
 
     def isOpAssignmentName(name: Name) = name match {
@@ -697,7 +696,6 @@ trait StdNames {
     val length: NameType               = "length"
     val lengthCompare: NameType        = "lengthCompare"
     val liftedTree: NameType           = "liftedTree"
-    val `macro` : NameType             = "macro"
     val macroThis : NameType           = "_this"
     val macroContext : NameType        = "c"
     val main: NameType                 = "main"

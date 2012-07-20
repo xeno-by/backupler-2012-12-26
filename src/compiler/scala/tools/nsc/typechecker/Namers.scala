@@ -765,10 +765,7 @@ trait Namers extends MethodSynthesis {
      */
     private def assignTypeToTree(tree: ValOrDefDef, defnTyper: Typer, pt: Type): Type = {
       // compute result type from rhs
-      val typedBody =
-        if (tree.symbol.isTermMacro) defnTyper.computeMacroDefType(tree, pt)
-        else defnTyper.computeType(tree.rhs, pt)
-
+      val typedBody = defnTyper.computeType(tree.rhs, pt)
       val typedDefn = widenIfNecessary(tree.symbol, typedBody, pt)
       assignTypeToTree(tree, typedDefn)
     }
@@ -987,16 +984,6 @@ trait Namers extends MethodSynthesis {
       // hence we make use of that and let them have whatever right-hand side they need
       // (either "macro ???" as they used to or just "???" to maximally simplify their compilation)
       if (fastTrack contains ddef.symbol) ddef.symbol setFlag MACRO
-
-      // macro defs need to be typechecked in advance
-      // because @macroImpl annotation only gets assigned during typechecking
-      // otherwise we might find ourselves in the situation when we specified -Xmacro-fallback-classpath
-      // but macros still don't expand
-      // that might happen because macro def doesn't have its link a macro impl yet
-      if (ddef.symbol.isTermMacro) {
-        val pt = resultPt.substSym(tparamSyms, tparams map (_.symbol))
-        typer.computeMacroDefType(ddef, pt)
-      }
 
       thisMethodType({
         val rt = (
