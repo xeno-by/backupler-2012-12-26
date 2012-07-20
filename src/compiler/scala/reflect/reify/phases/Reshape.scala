@@ -13,7 +13,6 @@ trait Reshape {
    *  Rolls back certain changes that were introduced during typechecking of the reifee.
    *
    *  These include:
-   *    * Undoing macro expansions
    *    * Replacing type trees with TypeTree(tpe)
    *    * Reassembling CompoundTypeTrees into reifiable form
    *    * Transforming Modifiers.annotations into Symbol.annotations
@@ -24,8 +23,7 @@ trait Reshape {
   val reshape = new Transformer {
     var currentSymbol: Symbol = NoSymbol
 
-    override def transform(tree0: Tree) = {
-      val tree = undoMacroExpansion(tree0)
+    override def transform(tree: Tree) = {
       currentSymbol = tree.symbol
 
       val preTyper = tree match {
@@ -91,27 +89,6 @@ trait Reshape {
 
       super.transform(preTyper)
     }
-
-    private def undoMacroExpansion(tree: Tree): Tree =
-      tree.attachments.get[MacroExpansionAttachment] match {
-        case Some(MacroExpansionAttachment(original)) =>
-          original match {
-            // this hack is necessary until I fix implicit macros
-            // so far tag materialization is implemented by sneaky macros hidden in scala-compiler.jar
-            // hence we cannot reify references to them, because noone will be able to see them later
-            // when implicit macros are fixed, these sneaky macros will move to corresponding companion objects
-            // of, say, ClassTag or TypeTag
-            case Apply(TypeApply(_, List(tt)), _) if original.symbol == MacroInternal_materializeClassTag =>
-              gen.mkNullaryCall(Predef_implicitly, List(appliedType(ClassTagClass, tt.tpe)))
-            case Apply(TypeApply(_, List(tt)), List(pre)) if original.symbol == MacroInternal_materializeAbsTypeTag =>
-              gen.mkNullaryCall(Predef_implicitly, List(typeRef(pre.tpe, AbsTypeTagClass, List(tt.tpe))))
-            case Apply(TypeApply(_, List(tt)), List(pre)) if original.symbol == MacroInternal_materializeTypeTag =>
-              gen.mkNullaryCall(Predef_implicitly, List(typeRef(pre.tpe, TypeTagClass, List(tt.tpe))))
-            case _ =>
-              original
-          }
-        case _ => tree
-      }
 
     override def transformModifiers(mods: Modifiers) = {
       val mods1 = toPreTyperModifiers(mods, currentSymbol)
