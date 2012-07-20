@@ -69,6 +69,19 @@ import language.{implicitConversions, existentials}
  *  functions to Array values. These are described in more detail in the documentation of [[scala.Array]].
  */
 object Predef extends LowPriorityImplicits {
+  /** The magic `macro` combinator
+   *  (is magic in a sense that it is treated specially by the typechecker).
+   *
+   *  When used in a method body, designates that method as a macro definition
+   *  linked to a macro implementation referenced in the argument of the combinator.
+   *
+   *  For example,
+   *
+   *    def assert(cond: Boolean, msg: String) = macro(assertImpl)
+   *    def assertImpl(c: scala.reflect.makro.Context)(cond: c.Expr[Boolean], msg: c.Expr[String]) = ...
+   */
+  def macro(impl: Nothing) = ???
+
   /**
    * Retrieve the runtime representation of a class type. `classOf[T]` is equivalent to
    * the class literal `T.class` in Java.

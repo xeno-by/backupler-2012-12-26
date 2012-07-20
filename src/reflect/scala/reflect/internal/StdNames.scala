@@ -696,6 +696,7 @@ trait StdNames {
     val length: NameType               = "length"
     val lengthCompare: NameType        = "lengthCompare"
     val liftedTree: NameType           = "liftedTree"
+    val macro : NameType               = "macro"
     val macroThis : NameType           = "_this"
     val macroContext : NameType        = "c"
     val main: NameType                 = "main"

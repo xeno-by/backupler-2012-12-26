@@ -19,7 +19,7 @@ import java.lang.reflect.{Array => jArray, Method => jMethod}
  *
  *  Say we have in a class C:
  *
- *    def foo[T](xs: List[T]): T = macro fooBar
+ *    def foo[T](xs: List[T]): T = macro(fooBar)
  *
  *  Then fooBar needs to point to a static method of the following form:
  *
@@ -180,21 +180,25 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
    *    1) Refer to a statically accessible, non-overloaded method.
    *    2) Have the right parameter lists as outlined in the SIP / in the doc comment of this class.
    *
-   *  @return typechecked rhs of the given macro definition
+   *  @return typechecked macro implementation reference for a given macro definition
+   *          sets the MACRO flag for the macro definition symbol if it's deemed to be a macro
+   *          sets the IS_ERROR flag for the macro definition symbol if something bad happens
    */
-  def typedMacroBody(typer: Typer, ddef: DefDef): Tree = {
-    import typer.context
-    macroLogVerbose("typechecking macro def %s at %s".format(ddef.symbol, ddef.pos))
+  def typedMacroBody(context: Context, impl: Tree): Tree = {
+    val typer = newTyper(context)
+    val macroDef = context.enclMethod.tree.symbol
+    macroLogVerbose("typechecking macro def %s at %s".format(macroDef, macroDef.pos))
 
-    if (fastTrack contains ddef.symbol) {
+    if (fastTrack contains macroDef) {
       macroLogVerbose("typecheck terminated unexpectedly: macro is hardwired")
+      val ddef = context.enclMethod.tree.asInstanceOf[DefDef]
       assert(!ddef.tpt.isEmpty, "hardwired macros must provide result type")
       return EmptyTree
     }
 
-    if (!typer.checkFeature(ddef.pos, MacrosFeature, immediate = true)) {
+    if (!typer.checkFeature(macroDef.pos, MacrosFeature, immediate = true)) {
       macroLogVerbose("typecheck terminated unexpectedly: language.experimental.macros feature is not enabled")
-      ddef.symbol setFlag IS_ERROR
+      macroDef setFlag IS_ERROR
       return EmptyTree
     }
 
@@ -213,18 +217,22 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       hasErrors = true
       context.error(pos, msg)
     }
-
-    val macroDef = ddef.symbol
-    val defpos = macroDef.pos
-    val implpos = ddef.rhs.pos
-    assert(macroDef.isTermMacro, ddef)
-
     def invalidBodyError() =
-      reportError(defpos,
+      reportError(macroDef.pos,
         "macro body has wrong shape:" +
-        "\n required: macro <reference to implementation object>.<implementation method name>" +
-        "\n or      : macro <implementation method name>")
-    def validatePreTyper(rhs: Tree): Unit = rhs match {
+        "\n required: Predef.macro(<reference to implementation object>.<implementation method name>)" +
+        "\n or      : Predef.macro(<implementation method name>)")
+
+    val ddef = context.enclMethod.tree match {
+      case ddef @ DefDef(_, _, _, _, _, _) =>
+        macroDef setFlag MACRO
+        ddef
+      case _ =>
+        reportError(macroDef.pos, "Predef.macro can only be used in a body of a macro definition")
+        return EmptyTree
+    }
+
+    def validatePreTyper(impl: Tree): Unit = impl match {
       // we do allow macro invocations inside macro bodies
       // personally I don't mind if pre-typer tree is a macro invocation
       // that later resolves to a valid reference to a macro implementation
@@ -238,10 +246,10 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       case Select(_, _) => ;
       case _ => invalidBodyError()
     }
-    def validatePostTyper(rhs1: Tree): Unit = {
+    def validatePostTyper(impl1: Tree): Unit = {
       def loop(tree: Tree): Unit = {
         def errorNotStatic() =
-          reportError(implpos, "macro implementation must be in statically accessible object")
+          reportError(impl.pos, "macro implementation must be in statically accessible object")
 
         def ensureRoot(sym: Symbol) =
           if (!sym.isModule && !sym.isModuleClass) errorNotStatic()
@@ -260,36 +268,35 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
           case Select(qual, name) if name.isTypeName =>
             loop(qual)
           case Select(qual, name) if name.isTermName =>
-            if (tree.symbol != rhs1.symbol) ensureModule(tree.symbol)
+            if (tree.symbol != impl1.symbol) ensureModule(tree.symbol)
             loop(qual)
           case Ident(name) if name.isTypeName =>
             ;
           case Ident(name) if name.isTermName =>
-            if (tree.symbol != rhs1.symbol) ensureModule(tree.symbol)
+            if (tree.symbol != impl1.symbol) ensureModule(tree.symbol)
           case _ =>
             invalidBodyError()
         }
       }
 
-      loop(rhs1)
+      loop(impl1)
     }
 
-    val rhs = ddef.rhs
-    validatePreTyper(rhs)
+    validatePreTyper(impl)
     if (hasErrors) macroTraceVerbose("macro def failed to satisfy trivial preconditions: ")(macroDef)
 
     // we use typed1 instead of typed, because otherwise adapt is going to mess us up
     // if adapt sees <qualifier>.<method>, it will want to perform eta-expansion and will fail
     // unfortunately, this means that we have to manually trigger macro expansion
     // because it's adapt which is responsible for automatic expansion during typechecking
-    def typecheckRhs(rhs: Tree): Tree = {
+    def typecheckImpl(impl: Tree): Tree = {
       try {
         val prevNumErrors = reporter.ERROR.count // [Eugene] funnily enough, the isErroneous check is not enough
-        var rhs1 = if (hasErrors) EmptyTree else typer.typed1(rhs, EXPRmode, WildcardType)
-        def typecheckedWithErrors = (rhs1 exists (_.isErroneous)) || reporter.ERROR.count != prevNumErrors
-        def rhsNeedsMacroExpansion = rhs1.symbol != null && rhs1.symbol.isTermMacro && !rhs1.symbol.isErroneous
-        while (!typecheckedWithErrors && rhsNeedsMacroExpansion) {
-          rhs1 = macroExpand1(typer, rhs1) match {
+        var impl1 = if (hasErrors) EmptyTree else typer.typed1(impl, EXPRmode, WildcardType)
+        def typecheckedWithErrors = (impl1 exists (_.isErroneous)) || reporter.ERROR.count != prevNumErrors
+        def implNeedsMacroExpansion = impl1.symbol != null && impl1.symbol.isTermMacro && !impl1.symbol.isErroneous
+        while (!typecheckedWithErrors && implNeedsMacroExpansion) {
+          impl1 = macroExpand1(typer, impl1) match {
             case Success(expanded) =>
               try {
                 val typechecked = typer.typed1(expanded, EXPRmode, WildcardType)
@@ -304,22 +311,22 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               result
           }
         }
-        rhs1
+        impl1
       } catch {
         case ex: TypeError =>
-          typer.reportTypeError(context, rhs.pos, ex)
-          typer.infer.setError(rhs)
+          typer.reportTypeError(context, impl.pos, ex)
+          typer.infer.setError(impl)
       }
     }
 
     val prevNumErrors = reporter.ERROR.count // funnily enough, the isErroneous check is not enough
-    var rhs1 = typecheckRhs(rhs)
-    def typecheckedWithErrors = (rhs1 exists (_.isErroneous)) || reporter.ERROR.count != prevNumErrors
+    var impl1 = typecheckImpl(impl)
+    def typecheckedWithErrors = (impl1 exists (_.isErroneous)) || reporter.ERROR.count != prevNumErrors
     hasErrors = hasErrors || typecheckedWithErrors
     if (typecheckedWithErrors) macroTraceVerbose("body of a macro def failed to typecheck: ")(ddef)
 
-    val macroImpl = rhs1.symbol
-    macroDef withAnnotation AnnotationInfo(MacroImplAnnotation.tpe, List(rhs1), Nil)
+    val macroImpl = impl1.symbol
+    macroDef withAnnotation AnnotationInfo(MacroImplAnnotation.tpe, List(impl1), Nil)
     if (!hasErrors) {
       if (macroImpl == null) {
          invalidBodyError()
@@ -327,11 +334,11 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
         if (!macroImpl.isMethod)
            invalidBodyError()
         if (macroImpl.isOverloaded)
-          reportError(implpos, "macro implementation cannot be overloaded")
-        if (!macroImpl.typeParams.isEmpty && (!rhs1.isInstanceOf[TypeApply]))
-          reportError(implpos, "macro implementation reference needs type arguments")
+          reportError(impl.pos, "macro implementation cannot be overloaded")
+        if (!macroImpl.typeParams.isEmpty && (!impl1.isInstanceOf[TypeApply]))
+          reportError(impl.pos, "macro implementation reference needs type arguments")
         if (!hasErrors)
-          validatePostTyper(rhs1)
+          validatePostTyper(impl1)
       }
       if (hasErrors)
         macroTraceVerbose("macro def failed to satisfy trivial preconditions: ")(macroDef)
@@ -433,6 +440,8 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       actparamss = transformTypeTagEvidenceParams(actparamss, (param, tparam) => None)
 
       val rettpe = if (!ddef.tpt.isEmpty) typer.typedType(ddef.tpt).tpe else computeMacroDefTypeFromMacroImpl(ddef, macroDef, macroImpl)
+      impl1 setType rettpe
+
       val (reqparamsss0, reqres0) = macroImplSigs(macroDef, ddef.tparams, ddef.vparamss, rettpe)
       var reqparamsss = reqparamsss0
 
@@ -455,7 +464,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
           argsPart + ": " + retPart
         }
         def compatibilityError(addendum: String) =
-          reportError(implpos,
+          reportError(impl.pos,
             "macro implementation has wrong shape:"+
             "\n required: "+showMeth(reqparamsss.head, reqres, true) +
             (reqparamsss.tail map (paramss => "\n or      : "+showMeth(paramss, reqres, true)) mkString "")+
@@ -492,7 +501,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       macroDef setFlag IS_ERROR
     }
 
-    rhs1
+    impl1
   }
 
   def computeMacroDefTypeFromMacroImpl(macroDdef: DefDef, macroDef: Symbol, macroImpl: Symbol): Type = {

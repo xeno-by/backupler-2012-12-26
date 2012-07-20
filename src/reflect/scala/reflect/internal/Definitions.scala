@@ -318,6 +318,7 @@ trait Definitions extends api.StandardDefinitions {
       def Predef_wrapRefArray = getMemberMethod(PredefModule, nme.wrapRefArray)
       def Predef_???          = getMemberMethod(PredefModule, nme.???)
       def Predef_implicitly   = getMemberMethod(PredefModule, nme.implicitly)
+      def Predef_macro        = getMemberMethod(PredefModule, nme.macro)
 
     /** Is `sym` a member of Predef with the given name?
      *  Note: DON't replace this by sym == Predef_conforms/etc, as Predef_conforms is a `def`

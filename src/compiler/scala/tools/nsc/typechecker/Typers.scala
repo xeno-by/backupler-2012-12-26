@@ -4252,7 +4252,8 @@ trait Typers extends Modes with Adaptations with Tags {
                 && (mode & (EXPRmode | SNDTRYmode)) == EXPRmode
               )
               val res =
-                if (useTry) tryTypedApply(fun2, args)
+                if (fun2.symbol == Predef_macro) typedMacroBody(context, if (args.length == 1) args(0) else EmptyTree)
+                else if (useTry) tryTypedApply(fun2, args)
                 else doTypedApply(tree, fun2, args, mode, pt)
 
             /*
