@@ -8,7 +8,7 @@ object Level extends Enumeration {
 }
 
 object Logger {
-  def error(message: String): Unit = macro LoggerMacros.error
+  def error(message: String): Unit = macro(LoggerMacros.error)
 }
 
 private object LoggerMacros {

@@ -1,7 +1,7 @@
 import scala.reflect.makro.Context
 
 class Logger {
-  def error(message: String) = macro Impls.error
+  def error(message: String) = macro(Impls.error)
 }
 
 object Impls {
