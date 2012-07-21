@@ -33,7 +33,7 @@ trait Infrastructure {
    *  With this classloader you can perform on-the-fly evaluation of macro arguments.
    *  For example, consider this code snippet:
    *
-   *    def staticEval[T](x: T) = macro staticEval[T]
+   *    def staticEval[T](x: T) = macro(staticEval[T])
    *
    *    def staticEval[T: c.TypeTag](c: Context)(x: c.Expr[T]) = {
    *      import scala.reflect.runtime.{universe => ru}
