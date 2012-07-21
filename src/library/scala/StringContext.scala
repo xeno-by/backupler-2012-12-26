@@ -83,7 +83,7 @@ case class StringContext(parts: String*) {
    *      format specifier `%%`.
    */
   // The implementation is magically hardwired into `scala.tools.reflect.MacroImplementations.macro_StringInterpolation_f`
-  def f(args: Any*): String = macro ???
+  def f(args: Any*): String = ??? // macro
 }
 
 object StringContext {

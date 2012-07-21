@@ -64,5 +64,5 @@ abstract class Universe extends base.Universe
    *      special measures are taken to ensure that all members accessed in the reifee remain visible
    */
   // implementation is magically hardwired to `scala.reflect.reify.Taggers`
-  def reify[T](expr: T): Expr[T] = macro ???
+  def reify[T](expr: T): Expr[T] = ??? // macro
 }
