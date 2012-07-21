@@ -22,5 +22,5 @@ object Macros {
     }
   }
 
-  def foo = macro impl
+  def foo = macro(impl)
 }

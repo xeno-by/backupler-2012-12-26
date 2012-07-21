@@ -1,6 +1,6 @@
 class Macros {
   class Macros {
-    def foo = macro Impls.foo
+    def foo = macro(Impls.foo)
   }
 }
 

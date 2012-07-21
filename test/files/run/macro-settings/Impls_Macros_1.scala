@@ -7,5 +7,5 @@ object Impls {
 }
 
 object Macros {
-  def foo = macro Impls.impl
+  def foo = macro(Impls.impl)
 }

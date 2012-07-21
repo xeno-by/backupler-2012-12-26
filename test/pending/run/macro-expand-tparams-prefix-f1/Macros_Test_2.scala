@@ -3,7 +3,7 @@ import scala.reflect.runtime.universe._
 object Test extends App {
   class D[T] {
     class C[U] {
-      def foo[V] = macro Impls.foo[List[T], U, V]
+      def foo[V] = macro(Impls.foo[List[T], U, V])
       foo[Boolean]
     }
   }

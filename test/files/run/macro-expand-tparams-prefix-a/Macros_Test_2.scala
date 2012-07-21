@@ -1,6 +1,6 @@
 object Test extends App {
   class C[T] {
-    def foo[U](x: U) = macro Impls.foo[U]
+    def foo[U](x: U) = macro(Impls.foo[U])
   }
 
   new C[Int]().foo(42)

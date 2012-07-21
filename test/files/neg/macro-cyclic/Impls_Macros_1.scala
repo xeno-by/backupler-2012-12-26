@@ -5,7 +5,7 @@ object Macros {
     c.universe.reify { implicitly[SourceLocation] }
   }
 
-  implicit def sourceLocation: SourceLocation1 = macro impl
+  implicit def sourceLocation: SourceLocation1 = macro(impl)
 }
 
 trait SourceLocation {

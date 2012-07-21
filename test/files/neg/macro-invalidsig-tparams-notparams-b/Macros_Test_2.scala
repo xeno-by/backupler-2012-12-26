@@ -1,6 +1,6 @@
 class D[T] {
   class C[U] {
-    def foo[V] = macro Impls.foo
+    def foo[V] = macro(Impls.foo)
   }
 }
 

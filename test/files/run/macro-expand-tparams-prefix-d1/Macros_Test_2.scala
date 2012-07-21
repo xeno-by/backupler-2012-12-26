@@ -1,7 +1,7 @@
 object Test extends App {
   class D[T] {
     class C[U] {
-      def foo[V] = macro Impls.foo[T, U, V]
+      def foo[V] = macro(Impls.foo[T, U, V])
       foo[Boolean]
     }
   }

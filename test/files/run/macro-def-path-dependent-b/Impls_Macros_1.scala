@@ -12,7 +12,7 @@ trait Reifiers {
 }
 
 trait Universe extends Exprs with Reifiers {
-  def reify[T](expr: T) = macro Impls.reify[T]
+  def reify[T](expr: T) = macro(Impls.reify[T])
 }
 
 object Impls {

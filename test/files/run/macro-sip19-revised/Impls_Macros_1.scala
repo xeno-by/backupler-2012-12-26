@@ -14,7 +14,7 @@ object Macros {
     c.universe.reify { SourceLocation1(outer.splice, c.literal(fileName).splice, c.literal(line).splice, c.literal(charOffset).splice) }
   }
 
-  implicit def sourceLocation: SourceLocation1 = macro impl
+  implicit def sourceLocation: SourceLocation1 = macro(impl)
 }
 
 trait SourceLocation {

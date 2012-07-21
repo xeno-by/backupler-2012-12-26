@@ -10,7 +10,7 @@ object Macros {
     c.universe.reify { SourceLocation(c.literal(fileName).splice, c.literal(line).splice, c.literal(charOffset).splice) }
   }
 
-  implicit def sourceLocation: SourceLocation = macro impl
+  implicit def sourceLocation: SourceLocation = macro(impl)
 }
 
 case class SourceLocation(

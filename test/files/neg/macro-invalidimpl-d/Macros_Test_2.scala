@@ -1,5 +1,5 @@
 class Macros extends MacroHelpers {
-  def foo(x: Any) = macro Impls.foo
+  def foo(x: Any) = macro(Impls.foo)
 }
 
 object Test extends App {

@@ -1,5 +1,5 @@
 object Macros {
-  def foo(x: Any) = macro {2; Impls.foo}
+  def foo(x: Any) = macro({2; Impls.foo})
 }
 
 object Test extends App {

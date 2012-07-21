@@ -1,12 +1,12 @@
 object Macros {
-  def foo(x: String) = macro Impls.fooObjectString
-  def foo(x: Int) = macro Impls.fooObjectInt
+  def foo(x: String) = macro(Impls.fooObjectString)
+  def foo(x: Int) = macro(Impls.fooObjectInt)
   def foo(x: Boolean) = println("fooObjectBoolean")
 }
 
 class Macros {
-  def foo(x: String) = macro Impls.fooClassString
-  def foo(x: Int) = macro Impls.fooClassInt
+  def foo(x: String) = macro(Impls.fooClassString)
+  def foo(x: Int) = macro(Impls.fooClassInt)
   def foo(x: Boolean) = println("fooClassBoolean")
 }
 

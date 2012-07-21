@@ -1,7 +1,7 @@
 import scala.reflect.makro.{Context => Ctx}
 
 object Macros {
-  def foo = macro Impls.foo
+  def foo = macro(Impls.foo)
 
   object Impls {
     def foo(c: Ctx) = c.universe.reify {

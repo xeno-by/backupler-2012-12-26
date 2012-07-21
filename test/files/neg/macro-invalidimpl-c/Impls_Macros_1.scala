@@ -5,5 +5,5 @@ class Macros {
     def foo(c: Ctx)(x: c.Expr[Any]) = ???
   }
 
-  def foo(x: Any) = macro Impls.foo
+  def foo(x: Any) = macro(Impls.foo)
 }

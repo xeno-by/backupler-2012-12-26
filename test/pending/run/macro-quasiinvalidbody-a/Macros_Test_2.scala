@@ -1,7 +1,7 @@
 import scala.reflect.makro.{Context => Ctx}
 
 object Macros extends Impls {
-  def foo(x: Any) = macro impl
+  def foo(x: Any) = macro(impl)
 }
 
 object Test extends App {

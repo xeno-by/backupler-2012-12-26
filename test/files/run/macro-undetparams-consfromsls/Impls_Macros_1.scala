@@ -12,7 +12,7 @@ object Macros {
     Nil
   }
 
-  def cons[A](x: A, xs: List[A]): List[A] = macro cons_impl[A]
+  def cons[A](x: A, xs: List[A]): List[A] = macro(cons_impl[A])
 
-  def nil[B]: List[B] = macro nil_impl[B]
+  def nil[B]: List[B] = macro(nil_impl[B])
 }

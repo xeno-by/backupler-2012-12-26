@@ -5,5 +5,5 @@ object Impls {
 }
 
 object Macros {
-  def decl[A] = macro Impls.impl[A]
+  def decl[A] = macro(Impls.impl[A])
 }

@@ -1,5 +1,5 @@
 class Range(val from: Int, val to: Int) extends RangeDefault {
-  override def foreach(f: Int => Unit): Unit = macro Impls.foreach
+  override def foreach(f: Int => Unit): Unit = macro(Impls.foreach)
 }
 
 object Test extends App {

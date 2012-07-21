@@ -6,5 +6,5 @@ object Impls {
 }
 
 object Macros {
-  def foo[T](x: T) = macro Impls.foo[T]
+  def foo[T](x: T) = macro(Impls.foo[T])
 }

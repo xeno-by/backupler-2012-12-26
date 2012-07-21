@@ -11,7 +11,7 @@ trait Reifiers {
 
   type Expr[T]
 
-  def reify[T](expr: T) = macro Impls.reify[T]
+  def reify[T](expr: T) = macro(Impls.reify[T])
 }
 
 trait Universe extends Exprs with Reifiers

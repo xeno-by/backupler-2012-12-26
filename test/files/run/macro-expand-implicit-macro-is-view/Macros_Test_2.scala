@@ -1,5 +1,5 @@
 object Macros {
-  implicit def foo(x: String): Option[Int] = macro Impls.foo
+  implicit def foo(x: String): Option[Int] = macro(Impls.foo)
 }
 
 object Test extends App {
