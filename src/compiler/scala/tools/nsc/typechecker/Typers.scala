@@ -5346,8 +5346,6 @@ trait Typers extends Modes with Adaptations with Tags {
     def typedTypeConstructor(tree: Tree): Tree = typedTypeConstructor(tree, NOmode)
 
     def computeType(tree: Tree, pt: Type): Type = {
-      // macros employ different logic of `computeType`
-      assert(!context.owner.isTermMacro, context.owner)
       val tree1 = typed(tree, pt)
       transformed(tree) = tree1
       val tpe = packedType(tree1, context.owner)
