@@ -4530,7 +4530,7 @@ trait Typers extends Modes with Adaptations with Tags {
           assert(errorContainer == null, "Cannot set ambiguous error twice for identifier")
           errorContainer = tree
         }
-        
+
         val fingerPrint: Long = name.fingerPrint
 
         var defSym: Symbol = tree.symbol  // the directly found symbol

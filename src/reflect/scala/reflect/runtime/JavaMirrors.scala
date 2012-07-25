@@ -163,8 +163,8 @@ trait JavaMirrors extends internal.SymbolTable with api.JavaUniverse { self: Sym
         checkMemberOf(field, symbol)
         if ((field.isMethod && !field.isAccessor) || field.isModule) ErrorNotField(field)
         val name =
-          if (field.isGetter) nme.getterToLocal(field.name)
-          else if (field.isSetter) nme.getterToLocal(nme.setterToGetter(field.name))
+          if (field.isGetter) field.name
+          else if (field.isSetter) nme.setterToGetter(field.name)
           else field.name
         val field1 = (field.owner.info decl name).asTermSymbol
         try fieldToJava(field1)
@@ -958,7 +958,7 @@ trait JavaMirrors extends internal.SymbolTable with api.JavaUniverse { self: Sym
      */
     def fieldToJava(fld: TermSymbol): jField = fieldCache.toJava(fld) {
       val jclazz = classToJava(fld.owner.asClassSymbol)
-      val jname = nme.dropLocalSuffix(fld.name).toString
+      val jname = fld.name
       try jclazz getDeclaredField jname
       catch {
         case ex: NoSuchFieldException => jclazz getDeclaredField expandedName(fld)
@@ -971,7 +971,7 @@ trait JavaMirrors extends internal.SymbolTable with api.JavaUniverse { self: Sym
     def methodToJava(meth: MethodSymbol): jMethod = methodCache.toJava(meth) {
       val jclazz = classToJava(meth.owner.asClassSymbol)
       val paramClasses = transformedType(meth).paramTypes map typeToJavaClass
-      val jname = nme.dropLocalSuffix(meth.name).toString
+      val jname = meth.name
       try jclazz getDeclaredMethod (jname, paramClasses: _*)
       catch {
         case ex: NoSuchMethodException =>

@@ -33,7 +33,6 @@ trait StandardNames extends base.StandardNames {
     val INTERPRETER_VAR_PREFIX: String
     val INTERPRETER_WRAPPER_SUFFIX: String
     val LOCALDUMMY_PREFIX: String
-    val LOCAL_SUFFIX_STRING: String
     val MODULE_SUFFIX_NAME: TermName
     val NAME_JOIN_NAME: TermName
     val PROTECTED_PREFIX: String
@@ -110,7 +109,6 @@ trait StandardNames extends base.StandardNames {
     def isExceptionResultName(name: Name): Boolean
     def isImplClassName(name: Name): Boolean
     def isLocalDummyName(name: Name): Boolean
-    def isLocalName(name: Name): Boolean
     def isLoopHeaderLabel(name: Name): Boolean
     def isModuleName(name: Name): Boolean
     def isOpAssignmentName(name: Name): Boolean
@@ -126,16 +124,13 @@ trait StandardNames extends base.StandardNames {
     def expandedName(name: TermName, base: Symbol, separator: String): TermName
     def expandedSetterName(name: TermName, base: Symbol): TermName
     def getterName(name: TermName): TermName
-    def getterToLocal(name: TermName): TermName
     def getterToSetter(name: TermName): TermName
     def localDummyName(clazz: Symbol): TermName
-    def localToGetter(name: TermName): TermName
     def protName(name: Name): TermName
     def protSetterName(name: Name): TermName
     def setterToGetter(name: TermName): TermName
     def superName(name: Name): TermName
 
-    def dropLocalSuffix(name: Name): Name
     def originalName(name: Name): Name
     def stripModuleSuffix(name: Name): Name
     def unspecializedName(name: Name): Name

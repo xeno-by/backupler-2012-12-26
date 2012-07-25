@@ -95,9 +95,7 @@ abstract class ICodeReader extends ClassfileParser {
         (jflags, NoSymbol)
       else {
         val owner = getOwner(jflags)
-        var sym = owner.info.findMember(name, 0, 0, false).suchThat(old => sameType(old.tpe, tpe))
-        if (sym == NoSymbol)
-          sym = owner.info.findMember(newTermName(name + nme.LOCAL_SUFFIX_STRING), 0, 0, false).suchThat(_.tpe =:= tpe)
+        var sym = owner.info.findMember(name, 0, 0, false).suchThat(sym => field ^ sym.isMethod).suchThat(old => sameType(old.tpe, tpe))
         if (sym == NoSymbol) {
           log("Could not find symbol for " + name + ": " + tpe)
           log(owner.info.member(name).tpe + " : " + tpe)
@@ -476,35 +474,35 @@ abstract class ICodeReader extends ClassfileParser {
         case JVM.return_     => code.emit(RETURN(UNIT))
 
         case JVM.getstatic    =>
-          val field = pool.getMemberSymbol(in.nextChar, true); size += 2
+          val field = pool.getMemberSymbol(in.nextChar, static = true, field = true); size += 2
           if (field.hasModuleFlag)
             code emit LOAD_MODULE(field)
           else
             code emit LOAD_FIELD(field, true)
         case JVM.putstatic   =>
-          val field = pool.getMemberSymbol(in.nextChar, true); size += 2
+          val field = pool.getMemberSymbol(in.nextChar, static = true, field = true); size += 2
           code.emit(STORE_FIELD(field, true))
         case JVM.getfield    =>
-          val field = pool.getMemberSymbol(in.nextChar, false); size += 2
+          val field = pool.getMemberSymbol(in.nextChar, static = false, field = true); size += 2
           code.emit(LOAD_FIELD(field, false))
         case JVM.putfield    =>
-          val field = pool.getMemberSymbol(in.nextChar, false); size += 2
+          val field = pool.getMemberSymbol(in.nextChar, static = false, field = true); size += 2
           code.emit(STORE_FIELD(field, false))
 
         case JVM.invokevirtual =>
-          val m = pool.getMemberSymbol(in.nextChar, false); size += 2
+          val m = pool.getMemberSymbol(in.nextChar, static = false, field = false); size += 2
           code.emit(CALL_METHOD(m, Dynamic))
         case JVM.invokeinterface  =>
-          val m = pool.getMemberSymbol(in.nextChar, false); size += 4
+          val m = pool.getMemberSymbol(in.nextChar, static = false, field = false); size += 4
           in.skip(2)
           code.emit(CALL_METHOD(m, Dynamic))
         case JVM.invokespecial   =>
-          val m = pool.getMemberSymbol(in.nextChar, false); size += 2
+          val m = pool.getMemberSymbol(in.nextChar, static = false, field = false); size += 2
           val style = if (m.name == nme.CONSTRUCTOR || m.isPrivate) Static(true)
                       else SuperCall(m.owner.name);
           code.emit(CALL_METHOD(m, style))
         case JVM.invokestatic    =>
-          val m = pool.getMemberSymbol(in.nextChar, true); size += 2
+          val m = pool.getMemberSymbol(in.nextChar, static = true, field = false); size += 2
           if (isBox(m))
             code.emit(BOX(toTypeKind(m.info.paramTypes.head)))
           else if (isUnbox(m))

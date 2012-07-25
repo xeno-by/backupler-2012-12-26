@@ -305,7 +305,6 @@ trait StdNames {
     val INITIALIZER: NameType              = CONSTRUCTOR // Is this buying us something?
     val LAZY_LOCAL: NameType               = "$lzy"
     val LAZY_SLOW_SUFFIX: NameType         = "$lzycompute"
-    val LOCAL_SUFFIX_STRING                = " "
     val UNIVERSE_BUILD_PREFIX: NameType    = "$u.build."
     val UNIVERSE_BUILD: NameType           = "$u.build"
     val UNIVERSE_PREFIX: NameType          = "$u."
@@ -320,7 +319,9 @@ trait StdNames {
     val MIXIN_CONSTRUCTOR: NameType        = "$init$"
     val MODULE_INSTANCE_FIELD: NameType    = NameTransformer.MODULE_INSTANCE_NAME  // "MODULE$"
     val OUTER: NameType                    = "$outer"
-    val OUTER_LOCAL: NameType              = OUTER + LOCAL_SUFFIX_STRING // "$outer ", note the space
+    // I've evicted nme.dropLocalSuffix so OUTER_LOCAL now has a trailing whitespace all the time
+    // TODO. check whether this is a problem
+    val OUTER_LOCAL: NameType              = "$outer " // note the space
     val OUTER_SYNTH: NameType              = "<outer>" // emitted by virtual pattern matcher, replaced by outer accessor in explicitouter
     val ROOTPKG: NameType                  = "_root_"
     val SELECTOR_DUMMY: NameType           = "<unapply-selector>"
@@ -339,7 +340,6 @@ trait StdNames {
     def isExceptionResultName(name: Name)   = name startsWith EXCEPTION_RESULT_PREFIX
     def isImplClassName(name: Name)         = name endsWith IMPL_CLASS_SUFFIX
     def isLocalDummyName(name: Name)        = name startsWith LOCALDUMMY_PREFIX
-    def isLocalName(name: Name)             = name endsWith LOCAL_SUFFIX_STRING
     def isLoopHeaderLabel(name: Name)       = (name startsWith WHILE_PREFIX) || (name startsWith DO_WHILE_PREFIX)
     def isProtectedAccessorName(name: Name) = name startsWith PROTECTED_PREFIX
     def isSuperAccessorName(name: Name)     = name startsWith SUPER_PREFIX_STRING
@@ -421,12 +421,8 @@ trait StdNames {
     } else
     (name, "", "")
 
-    def getterName(name: TermName): TermName     = if (isLocalName(name)) localToGetter(name) else name
-    def getterToLocal(name: TermName): TermName  = name append LOCAL_SUFFIX_STRING
+    def getterName(name: TermName): TermName     = name
     def getterToSetter(name: TermName): TermName = name append SETTER_SUFFIX
-    def localToGetter(name: TermName): TermName  = name dropRight LOCAL_SUFFIX_STRING.length
-
-    def dropLocalSuffix(name: Name): Name  = if (name endsWith ' ') name dropRight 1 else name
 
     def setterToGetter(name: TermName): TermName = {
       val p = name.pos(TRAIT_SETTER_SEPARATOR_STRING)

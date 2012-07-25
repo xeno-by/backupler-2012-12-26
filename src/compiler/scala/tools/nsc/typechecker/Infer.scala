@@ -302,6 +302,14 @@ trait Infer {
           context.unit.depends += sym.enclosingTopLevelClass
 
         var sym1 = sym filter (alt => context.isAccessible(alt, pre, site.isInstanceOf[Super]))
+        if (sym1.alternatives.nonEmpty) {
+          // now when backing field names don't get appended with LOCAL_SUFFIX_STRING
+          // we need to disambiguate by preferring fields if they are accessible
+          val fields = sym1.alternatives.filter(_.attachments.get[BackingFieldAttachment.type].isDefined)
+          val banned = fields.map(sym => sym.getter(sym.owner)).toSet
+          sym1 = sym1 suchThat (!banned(_))
+        }
+
         // Console.println("check acc " + (sym, sym1) + ":" + (sym.tpe, sym1.tpe) + " from " + pre);//DEBUG
         if (sym1 == NoSymbol && sym.isJavaDefined && context.unit.isJava) // don't try to second guess Java; see #4402
           sym1 = sym

@@ -316,8 +316,6 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
       name
     else if (nme.isSetterName(name))
       nme.getterToSetter(specializedName(nme.setterToGetter(name), types1, types2))
-    else if (nme.isLocalName(name))
-      nme.getterToLocal(specializedName(nme.localToGetter(name), types1, types2))
     else {
       val (base, cs, ms) = nme.splitSpecializedName(name)
       newTermName(base.toString + "$"
@@ -696,10 +694,11 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
 
           enterMember(specVal)
           // create accessors
+          // TODO. update these lines
           // debuglog("m: " + m + " isLocal: " + nme.isLocalName(m.name) + " specVal: " + specVal.name + " isLocal: " + nme.isLocalName(specVal.name))
 
-          if (nme.isLocalName(m.name)) {
-            val specGetter = mkAccessor(specVal, nme.localToGetter(specVal.name)) setInfo MethodType(Nil, specVal.info)
+          if (m.attachments.get[BackingFieldAttachment.type].isDefined) {
+            val specGetter = mkAccessor(specVal, specVal.name) setInfo MethodType(Nil, specVal.info)
             val origGetter = overrideIn(sClass, m.getter(clazz))
             info(origGetter) = Forward(specGetter)
             enterMember(specGetter)
@@ -1273,7 +1272,7 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
       (currentClass == sym.owner.enclClass) && (currentClass != targetClass)
 
     private def shouldMakePublic(sym: Symbol): Boolean =
-      sym.hasFlag(PRIVATE | PROTECTED) && (addressFields || !nme.isLocalName(sym.name))
+      sym.hasFlag(PRIVATE | PROTECTED) && (addressFields || !sym.attachments.get[BackingFieldAttachment.type].isDefined)
 
     /** All private members that are referenced are made protected,
      *  in order to be accessible from specialized subclasses.
@@ -1282,8 +1281,9 @@ abstract class SpecializeTypes extends InfoTransform with TypingTransformers {
       case Select(qual, name) =>
         val sym = tree.symbol
         if (sym.isPrivate) debuglog(
-          "seeing private member %s, currentClass: %s, owner: %s, isAccessible: %b, isLocalName: %b".format(
-            sym, currentClass, sym.owner.enclClass, isAccessible(sym), nme.isLocalName(sym.name))
+          // TODO. what if sym was compiled separately, and now its attachments are empty?
+          "seeing private member %s, currentClass: %s, owner: %s, isAccessible: %b, isBackingField: %b".format(
+            sym, currentClass, sym.owner.enclClass, isAccessible(sym), sym.attachments.get[BackingFieldAttachment.type].isDefined)
         )
         if (shouldMakePublic(sym) && !isAccessible(sym)) {
           debuglog("changing private flag of " + sym)

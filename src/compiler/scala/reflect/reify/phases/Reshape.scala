@@ -260,7 +260,7 @@ trait Reshape {
           if (defdef.name.startsWith(prefix)) {
             var name = defdef.name.toString.substring(prefix.length)
             def uncapitalize(s: String) = if (s.length == 0) "" else { val chars = s.toCharArray; chars(0) = chars(0).toLower; new String(chars) }
-            def findValDef(name: String) = (symdefs.values collect { case vdef: ValDef if nme.dropLocalSuffix(vdef.name).toString == name => vdef }).headOption
+            def findValDef(name: String) = (symdefs.values collect { case vdef: ValDef if vdef.name.toString == name => vdef }).headOption
             val valdef = findValDef(name).orElse(findValDef(uncapitalize(name))).orNull
             if (valdef != null) accessors(valdef) = accessors.getOrElse(valdef, Nil) :+ defdef
           }
@@ -284,8 +284,7 @@ trait Reshape {
             mods
           }
           val mods2 = toPreTyperModifiers(mods1, vdef.symbol)
-          val name1 = nme.dropLocalSuffix(name)
-          val vdef1 = ValDef(mods2, name1, tpt, rhs)
+          val vdef1 = ValDef(mods2, name, tpt, rhs)
           if (reifyDebug) println("resetting visibility of field: %s => %s".format(vdef, vdef1))
           Some(vdef1) // no copyAttrs here, because new ValDef and old symbols are not out of sync
         case ddef @ DefDef(mods, name, tparams, vparamss, tpt, rhs) =>

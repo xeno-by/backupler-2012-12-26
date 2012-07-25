@@ -318,7 +318,7 @@ abstract class Mixin extends InfoTransform with ast.TreeDSL {
                   // carries over the current entry in the type history)
                   val sym = beforeErasure {
                     // so we have a type history entry before erasure
-                    clazz.newValue(nme.getterToLocal(mixinMember.name), mixinMember.pos).setInfo(mixinMember.tpe.resultType)
+                    clazz.newValue(mixinMember.name, mixinMember.pos).setInfo(mixinMember.tpe.resultType)
                   }
                   sym updateInfo mixinMember.tpe.resultType // info at current phase
 

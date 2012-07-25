@@ -855,7 +855,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     def flags_=(fs: Long) = _rawflags = fs
     def rawflags_=(x: Long) { _rawflags = x }
 
-    final def hasGetter = isTerm && nme.isLocalName(name)
+    final def hasGetter = isTerm && getter(this) != NoSymbol
 
     final def isInitializedToDefault = !isType && hasAllFlags(DEFAULTINIT | ACCESSOR)
     final def isStaticModule = isModule && isStatic && !isMethod
@@ -1195,7 +1195,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     /** The decoded name of the symbol, e.g. `==` instead of `\$eq\$eq`.
      */
-    def decodedName: String = nme.dropLocalSuffix(name).decode
+    def decodedName: String = name.decode
 
     private def addModuleSuffix(n: Name): Name =
       if (needsModuleSuffix) n append nme.MODULE_SUFFIX_STRING else n
@@ -1214,7 +1214,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     )
     /** These should be moved somewhere like JavaPlatform.
      */
-    def javaSimpleName: Name = addModuleSuffix(nme.dropLocalSuffix(simpleName))
+    def javaSimpleName: Name = addModuleSuffix(simpleName)
     def javaBinaryName: Name = addModuleSuffix(fullNameInternal('/'))
     def javaClassName: String  = addModuleSuffix(fullNameInternal('.')).toString
 
@@ -1235,7 +1235,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       else effectiveOwner.enclClass.fullNameAsName(separator) append separator append name
     )
 
-    def fullNameAsName(separator: Char): Name = nme.dropLocalSuffix(fullNameInternal(separator))
+    def fullNameAsName(separator: Char): Name = fullNameInternal(separator)
 
     /** The encoded full path name of this symbol, where outer names and inner names
      *  are separated by periods.
@@ -1793,7 +1793,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     def suchThat(cond: Symbol => Boolean): Symbol = {
       val result = filter(cond)
-      assert(!result.isOverloaded, result.alternatives)
+//      assert(!result.isOverloaded, result.alternatives)
       result
     }
 
@@ -1889,7 +1889,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     /** The symbol accessed by this accessor function, but with given owner type. */
     final def accessed(ownerTp: Type): Symbol = {
       assert(hasAccessorFlag, this)
-      ownerTp decl nme.getterToLocal(getterName.toTermName)
+      ownerTp decl getterName.toTermName suchThat (!_.isMethod)
     }
 
     /** The module corresponding to this module class (note that this
@@ -2222,7 +2222,6 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
 
     def getterName: TermName = (
       if (isSetter) nme.setterToGetter(name.toTermName)
-      else if (nme.isLocalName(name)) nme.localToGetter(name.toTermName)
       else name.toTermName
     )
 

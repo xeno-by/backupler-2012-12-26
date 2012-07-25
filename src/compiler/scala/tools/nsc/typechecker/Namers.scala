@@ -175,7 +175,8 @@ trait Namers extends MethodSynthesis {
     )
 
     private def allowsOverload(sym: Symbol) = (
-      sym.isSourceMethod && sym.owner.isClass && !sym.owner.isPackageClass
+      // TODO. what if sym was compiled separately, and now its attachments are empty?
+      (sym.isSourceMethod || sym.attachments.get[BackingFieldAttachment.type].isDefined) && sym.owner.isClass && !sym.owner.isPackageClass
     )
 
     private def inCurrentScope(m: Symbol): Boolean = {
@@ -284,7 +285,7 @@ trait Namers extends MethodSynthesis {
       }
     }
     private def createFieldSymbol(tree: ValDef): TermSymbol =
-      owner.newValue(nme.getterToLocal(tree.name), tree.pos, tree.mods.flags & FieldFlags | PrivateLocal)
+      owner.newValue(tree.name, tree.pos, tree.mods.flags & FieldFlags | PrivateLocal).addAttachment(BackingFieldAttachment)
 
     private def createImportSymbol(tree: Tree) =
       NoSymbol.newImport(tree.pos) setInfo completerOf(tree)

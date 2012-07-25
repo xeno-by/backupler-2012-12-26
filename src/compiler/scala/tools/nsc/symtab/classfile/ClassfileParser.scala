@@ -204,13 +204,11 @@ abstract class ClassfileParser {
     /** Return the symbol of the class member at `index`.
      *  The following special cases exist:
      *   - If the member refers to special `MODULE$` static field, return
-     *  the symbol of the corresponding module.
-     *   - If the member is a field, and is not found with the given name,
-     *     another try is made by appending `nme.LOCAL_SUFFIX_STRING`
+     *     the symbol of the corresponding module.
      *   - If no symbol is found in the right tpe, a new try is made in the
      *     companion class, in case the owner is an implementation class.
      */
-    def getMemberSymbol(index: Int, static: Boolean): Symbol = {
+    def getMemberSymbol(index: Int, static: Boolean, field: Boolean): Symbol = {
       if (index <= 0 || len <= index) errorBadIndex(index)
       var f = values(index).asInstanceOf[Symbol]
       if (f eq null) {
@@ -239,9 +237,7 @@ abstract class ClassfileParser {
           val origName = nme.originalName(name)
           val owner = if (static) ownerTpe.typeSymbol.linkedClassOfClass else ownerTpe.typeSymbol
 //          println("\t" + owner.info.member(name).tpe.widen + " =:= " + tpe)
-          f = owner.info.findMember(origName, 0, 0, false).suchThat(_.tpe.widen =:= tpe)
-          if (f == NoSymbol)
-            f = owner.info.findMember(newTermName(origName + nme.LOCAL_SUFFIX_STRING), 0, 0, false).suchThat(_.tpe =:= tpe)
+          f = owner.info.findMember(origName, 0, 0, false).suchThat(sym => field ^ sym.isMethod).suchThat(_.tpe.widen =:= tpe)
           if (f == NoSymbol) {
             // if it's an impl class, try to find it's static member inside the class
             if (ownerTpe.typeSymbol.isImplClass) {

@@ -457,7 +457,7 @@ trait MethodSynthesis {
       override def derivedSym = basisSym.setter(enclClass)
     }
     case class Field(tree: ValDef) extends DerivedFromValDef {
-      def name       = nme.getterToLocal(tree.name)
+      def name       = tree.name
       def category   = FieldTargetClass
       def flagsMask  = FieldFlags
       def flagsExtra = PrivateLocal

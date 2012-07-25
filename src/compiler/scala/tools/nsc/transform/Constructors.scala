@@ -155,8 +155,7 @@ abstract class Constructors extends Transform with ast.TreeDSL {
         stat match {
           case ValDef(mods, name, _, _) if (mods hasFlag PRESUPER) =>
             // stat is the constructor-local definition of the field value
-            val fields = presupers filter (
-              vdef => nme.localToGetter(vdef.name) == name)
+            val fields = presupers filter (vdef => vdef.name == name)
             assert(fields.length == 1)
             val to = fields.head.symbol
             if (!to.tpe.isInstanceOf[ConstantType])
@@ -283,7 +282,7 @@ abstract class Constructors extends Transform with ast.TreeDSL {
           specializedStats find {
             case Assign(sel @ Select(This(_), _), rhs) =>
               (    (sel.symbol hasFlag SPECIALIZED)
-                && (nme.unspecializedName(nme.localToGetter(sel.symbol.name)) == nme.localToGetter(sym.name))
+                && (nme.unspecializedName(sel.symbol.name) == sym.name)
               )
             case _ => false
           }
