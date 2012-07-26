@@ -28,44 +28,12 @@ trait Symbols extends base.Symbols { self: Universe =>
 
     /** A list of annotations attached to this Symbol.
      */
-    // [Eugene++] we cannot expose the `annotations` method because it doesn't auto-initialize a symbol (see SI-5423)
-    // there was an idea to use the `isCompilerUniverse` flag and auto-initialize symbols in `annotations` whenever this flag is false
-    // but it doesn't work, because the unpickler (that is shared between reflective universes and global universes) is very picky about initialization
-    // scala.reflect.internal.Types$TypeError: bad reference while unpickling scala.collection.immutable.Nil: type Nothing not found in scala.type not found.
-    //        at scala.reflect.internal.pickling.UnPickler$Scan.toTypeError(UnPickler.scala:836)
-    //        at scala.reflect.internal.pickling.UnPickler$Scan$LazyTypeRef.complete(UnPickler.scala:849)          // auto-initialize goes boom
-    //        at scala.reflect.internal.Symbols$Symbol.info(Symbols.scala:1140)
-    //        at scala.reflect.internal.Symbols$Symbol.initialize(Symbols.scala:1272)                              // this triggers auto-initialize
-    //        at scala.reflect.internal.Symbols$Symbol.annotations(Symbols.scala:1438)                             // unpickler first tries to get pre-existing annotations
-    //        at scala.reflect.internal.Symbols$Symbol.addAnnotation(Symbols.scala:1458)                           // unpickler tries to add the annotation being read
-    //        at scala.reflect.internal.pickling.UnPickler$Scan.readSymbolAnnotation(UnPickler.scala:489)          // unpickler detects an annotation
-    //        at scala.reflect.internal.pickling.UnPickler$Scan.run(UnPickler.scala:88)
-    //        at scala.reflect.internal.pickling.UnPickler.unpickle(UnPickler.scala:37)
-    //        at scala.reflect.runtime.JavaMirrors$JavaMirror.unpickleClass(JavaMirrors.scala:253)                 // unpickle from within a reflexive mirror
-    //    def annotations: List[AnnotationInfo]
     def getAnnotations: List[AnnotationInfo]
 
     /** Whether this symbol carries an annotation for which the given
      *  symbol is its typeSymbol.
      */
     def hasAnnotation(sym: Symbol): Boolean
-
-    /** ...
-     */
-    def orElse(alt: => Symbol): Symbol
-
-    /** ...
-     */
-    def filter(cond: Symbol => Boolean): Symbol
-
-    /** If this is a NoSymbol, returns NoSymbol, otherwise
-     *  returns the result of applying `f` to this symbol.
-     */
-    def map(f: Symbol => Symbol): Symbol
-
-    /** ...
-     */
-    def suchThat(cond: Symbol => Boolean): Symbol
 
     /**
      * Set when symbol has a modifier of the form private[X], NoSymbol otherwise.
@@ -100,15 +68,17 @@ trait Symbols extends base.Symbols { self: Universe =>
      */
     def companionSymbol: Symbol
 
-    /** If this symbol is a package class, this symbol; otherwise the next enclosing
-     *  package class, or `NoSymbol` if none exists.
+    /** The type signature of this symbol seen as a member of given type `site`.
      */
-    def enclosingPackageClass: Symbol
+    def typeSignatureIn(site: Type): Type
 
-    /** If this symbol is a top-level class, this symbol; otherwise the next enclosing
-     *  top-level class, or `NoSymbol` if none exists.
+    /** The type signature of this symbol.
+     *  Note if the symbol is a member of a class, one almost always is interested
+     *  in `typeSignatureIn` with a site type instead.
      */
-    def enclosingTopLevelClass: Symbol
+    def typeSignature: Type
+
+    /** flags */
 
     /** Does this symbol represent a value, i.e. not a module and not a method?
      *  If yes, `isTerm` is also guaranteed to be true.
@@ -148,10 +118,6 @@ trait Symbols extends base.Symbols { self: Universe =>
      */
     def isPackageClass: Boolean
 
-    /** Is this symbol an overloaded method?
-     */
-    def isOverloaded   : Boolean
-
     /** Does this symbol represent the definition of a primitive class?
      *  Namely, is it one of [[scala.Double]], [[scala.Float]], [[scala.Long]], [[scala.Int]], [[scala.Char]],
      *  [[scala.Short]], [[scala.Byte]], [[scala.Unit]] or [[scala.Boolean]]?
@@ -166,8 +132,6 @@ trait Symbols extends base.Symbols { self: Universe =>
 
     /** Does this symbol represent the definition of a custom value class?
      *  Namely, is AnyVal among its parent classes?
-     *  TODO: Why not just have in reflect.internal?
-     *  [Eugene++] because it's useful for macros
      */
     def isDerivedValueClass: Boolean
 
@@ -213,15 +177,24 @@ trait Symbols extends base.Symbols { self: Universe =>
      */
     def isStatic: Boolean
 
-    /** The type signature of this symbol seen as a member of given type `site`.
-     */
-    def typeSignatureIn(site: Type): Type
+    /** helpers */
 
-    /** The type signature of this symbol.
-     *  Note if the symbol is a member of a class, one almost always is interested
-     *  in `typeSignatureIn` with a site type instead.
+    /** ...
      */
-    def typeSignature: Type
+    def orElse(alt: => Symbol): Symbol
+
+    /** ...
+     */
+    def filter(cond: Symbol => Boolean): Symbol
+
+    /** If this is a NoSymbol, returns NoSymbol, otherwise
+     *  returns the result of applying `f` to this symbol.
+     */
+    def map(f: Symbol => Symbol): Symbol
+
+    /** ...
+     */
+    def suchThat(cond: Symbol => Boolean): Symbol
 
     /** The string discriminator of this symbol; useful for debugging */
     def kind: String
@@ -229,7 +202,13 @@ trait Symbols extends base.Symbols { self: Universe =>
 
   /** The API of term symbols */
   trait TermSymbolApi extends SymbolApi with HasFlagsApi with TermSymbolBase { this: TermSymbol =>
-    /** The overloaded alternatives of this symbol */
+    /** Is this symbol an overloaded method?
+     */
+    def isOverloaded   : Boolean
+
+    /** The overloaded alternatives of this symbol.
+     *  If the symbol is not overloaded, this is just a singleton list of the symbol itself.
+     */
     def alternatives: List[Symbol]
 
     /** Performs method overloading resolution. More precisely, resolves an overloaded TermSymbol
@@ -278,7 +257,7 @@ trait Symbols extends base.Symbols { self: Universe =>
     /** A type reference that refers to this type symbol seen
      *  as a member of given type `site`.
      */
-    def asTypeIn(site: Type): Type
+    def toTypeIn(site: Type): Type
 
     /**  A type reference that refers to this type symbol
       *  Note if symbol is a member of a class, one almost always is interested
@@ -291,11 +270,16 @@ trait Symbols extends base.Symbols { self: Universe =>
       *  `PolyType(ClassInfoType(...))` that describes type parameters, value
       *  parameters, parent types, and members of `C`.
       */
-     def asType: Type  // !!! Same as typeSignature.
+     def toType: Type
   }
 
   /** The API of method symbols */
-  type MethodSymbolApi = MethodSymbolBase
+  type MethodSymbolApi extends TermSymbolApi with MethodSymbolBase { this: MethodSymbol =>
+    // typeparams
+    // params
+    // paramss (another name)
+    // resulttype
+  }
 
   /** The API of module symbols */
   type ModuleSymbolApi = ModuleSymbolBase
@@ -313,16 +297,10 @@ trait Symbols extends base.Symbols { self: Universe =>
 
   /** The API of free term symbols */
   trait FreeTermSymbolApi extends TermSymbolApi with FreeTermSymbolBase { this: FreeTermSymbol =>
-    /** The place where this symbol has been spawned */
-    def origin: String
-
     /** The valus this symbol refers to */
     def value: Any
   }
 
   /** The API of free term symbols */
-  trait FreeTypeSymbolApi extends TypeSymbolApi with FreeTypeSymbolBase { this: FreeTypeSymbol =>
-    /** The place where this symbol has been spawned */
-    def origin: String
-  }
+  trait FreeTypeSymbolApi = FreeTypeSymbolBase
 }

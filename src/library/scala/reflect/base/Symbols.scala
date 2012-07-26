@@ -146,7 +146,7 @@ trait Symbols { self: Universe =>
     /** This symbol cast to a TermSymbol.
      *  Returns ClassCastException if `isTerm` is false.
      */
-    def asTermSymbol: TermSymbol = throw new ClassCastException(toString)
+    def asTerm: TermSymbol = throw new ClassCastException(toString)
 
     /** Does this symbol represent the definition of a method?
      *  If yes, `isTerm` is also guaranteed to be true.
@@ -156,7 +156,7 @@ trait Symbols { self: Universe =>
     /** This symbol cast to a MethodSymbol.
      *  Returns ClassCastException if `isMethod` is false.
      */
-    def asMethodSymbol: MethodSymbol = throw new ClassCastException(toString)
+    def asMethod: MethodSymbol = throw new ClassCastException(toString)
 
     /** Does this symbol represent the definition of a module (i.e. it
      *  results from an object definition?).
@@ -167,7 +167,7 @@ trait Symbols { self: Universe =>
     /** This symbol cast to a ModuleSymbol defined by an object definition.
      *  Returns ClassCastException if `isModule` is false.
      */
-    def asModuleSymbol: ModuleSymbol = throw new ClassCastException(toString)
+    def asModule: ModuleSymbol = throw new ClassCastException(toString)
 
     /** Does this symbol represent the definition of a class or trait?
      *  If yes, `isType` is also guaranteed to be true.
@@ -183,7 +183,7 @@ trait Symbols { self: Universe =>
     /** This symbol cast to a ClassSymbol representing a class or trait.
      *  Returns ClassCastException if `isClass` is false.
      */
-    def asClassSymbol: ClassSymbol = throw new ClassCastException(toString)
+    def asClass: ClassSymbol = throw new ClassCastException(toString)
 
     /** Does this symbol represent a free term captured by reification?
      *  If yes, `isTerm` is also guaranteed to be true.
@@ -193,7 +193,7 @@ trait Symbols { self: Universe =>
     /** This symbol cast to a free term symbol.
      *  Returns ClassCastException if `isFreeTerm` is false.
      */
-    def asFreeTermSymbol: FreeTermSymbol = throw new ClassCastException(toString)
+    def asFreeTerm: FreeTermSymbol = throw new ClassCastException(toString)
 
     /** Does this symbol represent a free type captured by reification?
      *  If yes, `isType` is also guaranteed to be true.
@@ -203,7 +203,7 @@ trait Symbols { self: Universe =>
     /** This symbol cast to a free type symbol.
      *  Returns ClassCastException if `isFreeType` is false.
      */
-    def asFreeTypeSymbol: FreeTypeSymbol = throw new ClassCastException(toString)
+    def asFreeType: FreeTypeSymbol = throw new ClassCastException(toString)
 
     def newTermSymbol(name: TermName, pos: Position = NoPosition, flags: FlagSet = NoFlags): TermSymbol
     def newModuleAndClassSymbol(name: Name, pos: Position = NoPosition, flags: FlagSet = NoFlags): (ModuleSymbol, ClassSymbol)
