@@ -1,0 +1,6 @@
+Test_2.scala:2: error: type mismatch;
+ found   : Set[(some other)_$2(in method x)] where type (some other)_$2(in method x)
+ required: Set[_$2(in method x)] where type _$2(in method x)
+  def x: Set[_] = y.value
+                    ^
+one error found

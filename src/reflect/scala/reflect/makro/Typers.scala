@@ -76,6 +76,31 @@ trait Typers {
    */
   def resetLocalAttrs(tree: Tree): Tree
 
+  /** Replaces ExistentialTypes in a given type with equivalent BoundedWildcardTypes.
+   *
+   *  Is essentially an inverse of `makeFullyDefined` except for the fact that `dropExistential`
+   *  irreversibly destroys original scopes of skolems in ExistentialTypes.
+   *
+   *  Is necessary when `tp` comes from a scope that is different from the macro call site.
+   *  In that case existential skolems in `tp` will be incompatible with skolems in scope,
+   *  so you might get messages like:
+   *
+   *    Test_2.scala:2: error: type mismatch;
+   *     found   : Set[(some other)_$2(in method x)] where type (some other)_$2(in method x)
+   *     required: Set[_$2(in method x)] where type _$2(in method x)
+   */
+  def dropExistential(tp: Type): Type
+
+  /** Replace any (possibly bounded) wildcard types in type `tp` by existentially types.
+   *
+   *  Is essentially an inverse of `makeFullyDefined` except for the fact that `dropExistential`
+   *  irreversibly destroys original scopes of skolems in ExistentialTypes.
+   *
+   *  TODO. Is this necessary in macros?
+   *  Somewhat related discussion: https://github.com/scala/scala/pull/981
+   */
+  def makeFullyDefined(tp: Type): Type
+
   /** Represents an error during typechecking
    */
   type TypeError <: Throwable

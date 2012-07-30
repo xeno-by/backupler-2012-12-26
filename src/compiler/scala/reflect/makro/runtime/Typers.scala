@@ -63,6 +63,10 @@ trait Typers {
     }
   }
 
+  def dropExistential(tp: Type): Type = callsiteTyper.dropExistential(tp)
+
+  def makeFullyDefined(tp: Type): Type = callsiteTyper.infer.makeFullyDefined(tp)
+
   type TypeError = universe.TypeError
 
   object TypeError extends TypeErrorExtractor {
