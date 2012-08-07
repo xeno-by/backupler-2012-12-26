@@ -5,6 +5,7 @@ import symtab.Flags._
 import scala.tools.nsc.util._
 import scala.tools.nsc.util.ClassPath._
 import scala.reflect.runtime.ReflectionUtils
+import scala.reflect.runtime.{universe => ru}
 import scala.collection.mutable.ListBuffer
 import scala.compat.Platform.EOL
 import reflect.internal.util.Statistics
@@ -614,6 +615,11 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     }
   }
 
+  /** A mirror that corresponds to `macroClassloader`.
+   *  Is used to reflectively invoke macro implementations during macro expansions.
+   */
+  private lazy val macroMirror = ru.runtimeMirror(macroClassloader)
+
   /** Produces a function that can be used to invoke macro implementation for a given macro definition:
    *    1) Looks up macro implementation symbol in this universe.
    *    2) Loads its enclosing class from the macro classloader.
@@ -643,90 +649,19 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
           macroLogVerbose("resolved implementation %s at %s".format(macroImpl, macroImpl.pos))
           if (macroImpl.isErroneous) { macroTraceVerbose("macro implementation is erroneous (this means that either macro body or macro implementation signature failed to typecheck)")(macroDef); return None }
 
-          // [Eugene++] I don't use Scala reflection here, because it seems to interfere with JIT magic
-          // whenever you instantiate a mirror (and not do anything with in, just instantiate), performance drops by 15-20%
-          // I'm not sure what's the reason - for me it's pure voodoo
-          def loadMacroImpl(cl: ClassLoader): Option[(Object, jMethod)] = {
-            try {
-              // this logic relies on the assumptions that were valid for the old macro prototype
-              // namely that macro implementations can only be defined in top-level classes and modules
-              // with the new prototype that materialized in a SIP, macros need to be statically accessible, which is different
-              // for example, a macro def could be defined in a trait that is implemented by an object
-              // there are some more clever cases when seemingly non-static method ends up being statically accessible
-              // however, the code below doesn't account for these guys, because it'd take a look of time to get it right
-              // for now I leave it as a todo and move along to more the important stuff
-
-              macroTraceVerbose("loading implementation class: ")(macroImpl.owner.fullName)
-              macroTraceVerbose("classloader is: ")(ReflectionUtils.show(cl))
-
-              // [Eugene] relies on the fact that macro implementations can only be defined in static classes
-              // [Martin to Eugene++] There's similar logic buried in Symbol#flatname. Maybe we can refactor?
-              def classfile(sym: Symbol): String = {
-                def recur(sym: Symbol): String = sym match {
-                  case sym if sym.owner.isPackageClass =>
-                    val suffix = if (sym.isModuleClass) "$" else ""
-                    sym.fullName + suffix
-                  case sym =>
-                    val separator = if (sym.owner.isModuleClass) "" else "$"
-                    recur(sym.owner) + separator + sym.javaSimpleName.toString
-                }
-
-                if (sym.isClass || sym.isModule) recur(sym)
-                else recur(sym.enclClass)
-              }
-
-              // [Eugene++] this doesn't work for inner classes
-              // neither does macroImpl.owner.javaClassName, so I had to roll my own implementation
-              //val receiverName = macroImpl.owner.fullName
-              val implClassName = classfile(macroImpl.owner)
-              val implObj = try {
-                val implObjClass = jClass.forName(implClassName, true, cl)
-                implObjClass getField "MODULE$" get null
-              } catch {
-                case ex: NoSuchFieldException => macroTraceVerbose("exception when loading implObj: ")(ex); null
-                case ex: NoClassDefFoundError => macroTraceVerbose("exception when loading implObj: ")(ex); null
-                case ex: ClassNotFoundException => macroTraceVerbose("exception when loading implObj: ")(ex); null
-              }
-
-              if (implObj == null) None
-              else {
-                // [Eugene++] doh, it seems that I need to copy/paste Scala reflection logic
-                // see `JavaMirrors.methodToJava` or whatever it's called now
-                val implMeth = {
-                  def typeToJavaClass(tpe: Type): jClass[_] = tpe match {
-                    case ExistentialType(_, rtpe) => typeToJavaClass(rtpe)
-                    case TypeRef(_, ArrayClass, List(elemtpe)) => jArray.newInstance(typeToJavaClass(elemtpe), 0).getClass
-                    case TypeRef(_, sym: ClassSymbol, _) => jClass.forName(classfile(sym), true, cl)
-                    case _ => throw new NoClassDefFoundError("no Java class corresponding to "+tpe+" found")
-                  }
-
-                  val paramClasses = transformedType(macroImpl).paramTypes map typeToJavaClass
-                  try implObj.getClass getDeclaredMethod (macroImpl.name.toString, paramClasses: _*)
-                  catch {
-                    case ex: NoSuchMethodException =>
-                      val expandedName =
-                        if (macroImpl.isPrivate) nme.expandedName(macroImpl.name.toTermName, macroImpl.owner).toString
-                        else macroImpl.name.toString
-                      implObj.getClass getDeclaredMethod (expandedName, paramClasses: _*)
-                  }
-                }
-                macroLogVerbose("successfully loaded macro impl as (%s, %s)".format(implObj, implMeth))
-                Some((implObj, implMeth))
-              }
-            } catch {
-              case ex: ClassNotFoundException =>
-                macroTraceVerbose("implementation class failed to load: ")(ex.toString)
-                None
-              case ex: NoSuchMethodException =>
-                macroTraceVerbose("implementation method failed to load: ")(ex.toString)
-                None
-            }
-          }
-
-          loadMacroImpl(macroClassloader) map {
-            case (implObj, implMeth) =>
-              def runtime(args: List[Any]) = implMeth.invoke(implObj, (args map (_.asInstanceOf[AnyRef])): _*).asInstanceOf[Any]
-              runtime _
+          try {
+            val ruImplModule = macroMirror.staticModule(macroImpl.owner.fullName.toString)
+            val ruImplMeth = ruImplModule.moduleClass.typeSignature.member(ru.newTermName(macroImpl.name.toString)).asMethod
+            val implModule = macroMirror.reflectModule(ruImplModule).instance
+            val implMirror = macroMirror.reflect(implModule).reflectMethod(ruImplMeth)
+            Some((args: List[Any]) => implMirror(args))
+          } catch {
+            case ex: Throwable =>
+              val realex = ReflectionUtils.unwrapThrowable(ex)
+              val message = new java.io.StringWriter()
+              realex.printStackTrace(new java.io.PrintWriter(message))
+              macroLogVerbose("failed to reflect upon the macro implementation %s: %n%s".format(macroImpl, message))
+              None
           }
         }
 
