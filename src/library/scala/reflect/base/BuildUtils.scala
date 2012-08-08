@@ -24,38 +24,40 @@ trait BuildUtils { self: Universe =>
     def newNestedSymbol(owner: Symbol, name: Name, pos: Position, flags: FlagSet, isClass: Boolean): Symbol
 
     /** Create a fresh free term symbol.
-     *  @param   name   the name of the free variable
-     *  @param   info   the type signature of the free variable
-     *  @param   value  the value of the free variable at runtime
-     *  @param   flags  (optional) flags of the free variable
-     *  @param   origin debug information that tells where this symbol comes from
+     *
+     *  @param   name      the name of the free variable
+     *  @param   value     the value of the free variable at runtime
+     *  @param   flags     (optional) flags of the free variable
+     *  @param   origin    (optional) debug information that tells where this symbol comes from
      */
-    def newFreeTerm(name: String, info: Type, value: => Any, flags: FlagSet = NoFlags, origin: String = null): FreeTermSymbol
+    def newFreeTerm(name: String, value: => Any, flags: FlagSet = NoFlags, origin: String = null): FreeTermSymbol
 
     /** Create a fresh free non-existential type symbol.
-     *  @param   name   the name of the free variable
-     *  @param   info   the type signature of the free variable
-     *  @param   value  a type tag that captures the value of the free variable
-     *                  is completely phantom, since the captured type cannot be propagated to the runtime
-     *                  if it could be, we wouldn't be creating a free type to begin with
-     *                  the only usage for it is preserving the captured symbol for compile-time analysis
-     *  @param   flags  (optional) flags of the free variable
-     *  @param   origin debug information that tells where this symbol comes from
+     *
+     *  @param   name      the name of the free variable
+     *  @param   value     (optional) a type tag that captures the value of the free variable
+     *                     is completely phantom, since the captured type cannot be propagated to the runtime
+     *                     if it could be, we wouldn't be creating a free type to begin with
+     *                     the only usage for it is preserving the captured symbol for compile-time analysis
+     *  @param   flags     (optional) flags of the free variable
+     *  @param   origin    (optional) debug information that tells where this symbol comes from
      */
-    def newFreeType(name: String, info: Type, value: => Any, flags: FlagSet = NoFlags, origin: String = null): FreeTypeSymbol
+    def newFreeType(name: String, value: => Any = null, flags: FlagSet = NoFlags, origin: String = null): FreeTypeSymbol
 
     /** Create a fresh free existential type symbol.
-     *  @param   name   the name of the free variable
-     *  @param   info   the type signature of the free variable
-     *  @param   value  a type tag that captures the value of the free variable
-     *                  is completely phantom, since the captured type cannot be propagated to the runtime
-     *                  if it could be, we wouldn't be creating a free type to begin with
-     *                  the only usage for it is preserving the captured symbol for compile-time analysis
-     *  @param   flags  (optional) flags of the free variable
-     *  @param   origin (optional) debug information that tells where this symbol comes from
+     *
+     *  @param   name      the name of the free variable
+     *  @param   value     (optional) a type tag that captures the value of the free variable
+     *                     is completely phantom, since the captured type cannot be propagated to the runtime
+     *                     if it could be, we wouldn't be creating a free type to begin with
+     *                     the only usage for it is preserving the captured symbol for compile-time analysis
+     *  @param   flags     (optional) flags of the free variable
+     *  @param   origin    (optional) debug information that tells where this symbol comes from
+     *
      *  [Martin to Eugene: why needed?]
+     *  [Eugene to Martin] to distinguish free types (that make a type tag non-concrete) and existentials (that just stand for ExistentialTypes' tparams)
      */
-    def newFreeExistential(name: String, info: Type, value: => Any, flags: FlagSet = NoFlags, origin: String = null): FreeTypeSymbol
+    def newFreeExistential(name: String, value: => Any = null, flags: FlagSet = NoFlags, origin: String = null): FreeTypeSymbol
 
     /** Set symbol's type signature to given type.
      *  @return the symbol itself
@@ -63,6 +65,7 @@ trait BuildUtils { self: Universe =>
     def setTypeSignature[S <: Symbol](sym: S, tpe: Type): S
 
     /** Set symbol's annotations to given annotations `annots`.
+     *  @return the symbol itself
      */
     def setAnnotations[S <: Symbol](sym: S, annots: List[AnnotationInfo]): S
 

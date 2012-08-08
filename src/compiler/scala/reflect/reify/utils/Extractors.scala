@@ -175,7 +175,6 @@ trait Extractors {
           Select(Select(uref1 @ Ident(_), build1), newFreeTerm),
           List(
             _,
-            _,
             binding,
             Apply(Select(Select(uref2 @ Ident(_), build2), flagsFromBits), List(Literal(Constant(flags: Long)))),
             Literal(Constant(origin: String)))))
@@ -193,7 +192,6 @@ trait Extractors {
         ValDef(_, name, _, Apply(
           Select(Select(uref1 @ Ident(_), build1), newFreeType),
           List(
-            _,
             _,
             value,
             Apply(Select(Select(uref2 @ Ident(_), build2), flagsFromBits), List(Literal(Constant(flags: Long)))),

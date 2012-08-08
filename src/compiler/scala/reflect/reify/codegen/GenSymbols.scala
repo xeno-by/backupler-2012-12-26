@@ -101,11 +101,10 @@ trait GenSymbols {
       if (sym.isType) name = name.append(nme.REIFY_FREE_THIS_SUFFIX)
       if (sym.isCapturedVariable) {
         assert(value.isInstanceOf[Ident], showRaw(value))
-        val capturedTpe = capturedVariableType(sym)
         val capturedValue = referenceCapturedVariable(sym)
-        (name, mirrorBuildCall(nme.newFreeTerm, reify(sym.name.toString), reify(capturedTpe), capturedValue, mirrorBuildCall(nme.flagsFromBits, reify(sym.flags)), reify(origin(sym))))
+        (name, mirrorBuildCall(nme.newFreeTerm, reify(sym.name.toString), capturedValue, mirrorBuildCall(nme.flagsFromBits, reify(sym.flags)), reify(origin(sym))))
       } else {
-        (name, mirrorBuildCall(nme.newFreeTerm, reify(sym.name.toString), reify(sym.tpe), value, mirrorBuildCall(nme.flagsFromBits, reify(sym.flags)), reify(origin(sym))))
+        (name, mirrorBuildCall(nme.newFreeTerm, reify(sym.name.toString), value, mirrorBuildCall(nme.flagsFromBits, reify(sym.flags)), reify(origin(sym))))
       }
     }
 
@@ -115,7 +114,7 @@ trait GenSymbols {
       var name = newTermName(nme.REIFY_FREE_PREFIX + sym.name)
       val phantomTypeTag = Apply(TypeApply(Select(Ident(nme.UNIVERSE_SHORT), nme.TypeTag), List(value)), List(Literal(Constant(null)), Literal(Constant(null))))
       val flavor = if (sym.isExistential) nme.newFreeExistential else nme.newFreeType
-      (name, mirrorBuildCall(flavor, reify(sym.name.toString), reify(sym.info), phantomTypeTag, mirrorBuildCall(nme.flagsFromBits, reify(sym.flags)), reify(origin(sym))))
+      (name, mirrorBuildCall(flavor, reify(sym.name.toString), phantomTypeTag, mirrorBuildCall(nme.flagsFromBits, reify(sym.flags)), reify(origin(sym))))
     }
 
   def reifySymDef(sym: Symbol): Tree =
