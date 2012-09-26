@@ -157,6 +157,8 @@ trait Mirrors { self: Universe =>
      *  with invoking the corresponding method or constructor.
      */
     def apply(args: Any*): Any
+
+    def rebind(newReceiver: Any): Unit
   }
 
   /** A mirror that reflects the instance or static parts of a runtime class */
