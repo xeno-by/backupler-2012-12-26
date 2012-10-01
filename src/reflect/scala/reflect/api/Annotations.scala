@@ -4,6 +4,7 @@ package api
 import scala.collection.immutable.ListMap
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines annotations and operations on them.
+ *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  Scala reflection supports:
  *    1. Annotations on definitions or types produced by the Scala compiler, i.e. subtypes of both

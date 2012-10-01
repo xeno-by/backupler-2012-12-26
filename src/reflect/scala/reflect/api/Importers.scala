@@ -2,6 +2,7 @@ package scala.reflect
 package api
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines importers and operations on them.
+ *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  As described in [[scala.reflect.api.package]], reflection artifacts are contained in universes.
  *  Typically all processing happens within a single universe (e.g. a compile-time macro universe
