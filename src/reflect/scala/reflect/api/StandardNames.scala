@@ -38,7 +38,6 @@ trait StandardNames {
 
   trait TypeNamesApi extends NamesApi {
     type NameType = TypeName
-    val EMPTY: NameType
     val WILDCARD_STAR: NameType
   }
 }
