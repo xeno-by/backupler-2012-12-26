@@ -8,7 +8,7 @@ package api
 
 import scala.reflect.runtime.{universe => ru}
 
-/** A slice of the Scala reflection cake that defines strongly-typed tree wrappers and operations on them.
+/** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines strongly-typed tree wrappers and operations on them.
  *
  *  Expr wraps an abstract syntax tree ([[scala.reflect.api.Trees#Tree]]) and tags it with its type ([[scala.reflect.api.Types#Type]]).
  *

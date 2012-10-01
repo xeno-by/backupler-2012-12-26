@@ -3,7 +3,7 @@ package api
 
 import scala.language.implicitConversions
 
-/** A slice of the Scala reflection cake that defines flag sets and operations on them.
+/** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines flag sets and operations on them.
  *
  *  Flags are used to provide modifiers for abstract syntax trees that represent definitions
  *  via the `flags` field of [[scala.reflect.api.Trees#Modifiers]]. Trees that accept modifiers are:
