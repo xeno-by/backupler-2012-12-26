@@ -106,6 +106,9 @@ trait Constants {
     def unapply(arg: Constant): Option[Any]
   }
 
+  /** The API of `Constant` instances.
+   *  The main source of information about exprs is the [[scala.reflect.api.Constants]] page.
+   */
   abstract class ConstantApi {
     /** Payload of the constant. */
     val value: Any

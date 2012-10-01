@@ -101,7 +101,7 @@ trait Annotations { self: Universe =>
    /** The constructor/deconstructor for `Annotation` instances. */
    val Annotation: AnnotationExtractor
 
-  /** An extractor class to create and pattern match with syntax `Annotation(atp, scalaArgs, javaArgs)`.
+  /** An extractor class to create and pattern match with syntax `Annotation(tpe, scalaArgs, javaArgs)`.
    *  Here, `tpe` is the annotation type, `scalaArgs` the payload of Scala annotations, and `javaArgs` the payload of Java annotations.
    */
   abstract class AnnotationExtractor {
@@ -109,7 +109,9 @@ trait Annotations { self: Universe =>
     def unapply(ann: Annotation): Option[(Type, List[Tree], ListMap[Name, JavaArgument])]
   }
 
-  /** API of `Annotation` instances. */
+  /** The API of `Annotation` instances.
+   *  The main source of information about annotations is the [[scala.reflect.api.Annotations]] page.
+   */
   trait AnnotationApi {
     /** The type of the annotation. */
     def tpe: Type
@@ -152,7 +154,9 @@ trait Annotations { self: Universe =>
     def unapply(arg: LiteralArgument): Option[Constant]
   }
 
-  /** API of `LiteralArgument` instances. */
+  /** The API of `LiteralArgument` instances.
+   *  The main source of information about annotations is the [[scala.reflect.api.Annotations]] page.
+   */
   trait LiteralArgumentApi {
     /** The underlying compile-time constant value. */
     def value: Constant
@@ -178,7 +182,9 @@ trait Annotations { self: Universe =>
     def unapply(arg: ArrayArgument): Option[Array[JavaArgument]]
   }
 
-  /** API of `ArrayArgument` instances. */
+  /** API of `ArrayArgument` instances.
+   *  The main source of information about annotations is the [[scala.reflect.api.Annotations]] page.
+   */
   trait ArrayArgumentApi {
     /** The underlying array of Java annotation arguments. */
     def args: Array[JavaArgument]
@@ -204,7 +210,9 @@ trait Annotations { self: Universe =>
     def unapply(arg: NestedArgument): Option[Annotation]
   }
 
-  /** API of `NestedArgument` instances. */
+  /** API of `NestedArgument` instances.
+   *  The main source of information about annotations is the [[scala.reflect.api.Annotations]] page.
+   */
   trait NestedArgumentApi {
     /** The underlying nested annotation. */
     def annotation: Annotation
