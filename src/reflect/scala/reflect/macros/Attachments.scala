@@ -1,5 +1,5 @@
 package scala.reflect
-package api
+package macros
 
 /** Attachments provide a way to associate custom metadata with symbols and trees.
  *

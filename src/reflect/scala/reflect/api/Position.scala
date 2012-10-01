@@ -45,7 +45,7 @@ package api
  *  pos.makeTransparent converts an opaque range position into a transparent one.
  *                      returns all other positions unchanged.
  */
-trait Position extends Attachments {
+trait Position extends scala.reflect.macros.Attachments {
 
   type Pos >: Null <: Position
 
