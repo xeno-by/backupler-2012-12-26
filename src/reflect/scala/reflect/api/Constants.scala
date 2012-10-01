@@ -7,7 +7,7 @@ package scala.reflect
 package api
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines compile-time constants and operations on them.
- *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  According to the section 6.24 "Constant Expressions" of the Scala language specification,
  *  certain expressions (dubbed ''constant expressions'') can be evaluated by the Scala compiler at compile-time.
@@ -22,7 +22,7 @@ package api
  *  Such constants are used to represent literals in abstract syntax trees (the [[scala.reflect.api.Trees#Literal]] node)
  *  and literal arguments for Java class file annotations (the [[scala.reflect.api.Annotations#LiteralArgument]] class).
  *
- *  === Representation of constants ===
+ *  === Example ===
  *
  *  The `value` field deserves some explanation. Primitive and string values are represented as themselves, whereas
  *  references to classes and enums are a bit roundabout.
@@ -35,8 +35,7 @@ package api
  *  Enumeration value references are represented as instances of [[scala.reflect.api.Symbols#Symbol]], which on JVM point to methods
  *  that return underlying enum values. To inspect an underlying enumeration or to get runtime value of a reference to an enum,
  *  one should use a [[scala.reflect.api.Mirrors#RuntimeMirror]] (the simplest way to get such a mirror is again [[scala.reflect.api.package#currentMirror]]).
- *
- *  === Example ===
+
  *  {{{
  *  enum JavaSimpleEnumeration { FOO, BAR }
  *

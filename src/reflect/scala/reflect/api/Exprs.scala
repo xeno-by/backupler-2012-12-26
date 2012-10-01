@@ -9,7 +9,7 @@ package api
 import scala.reflect.runtime.{universe => ru}
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines strongly-typed tree wrappers and operations on them.
- *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  Expr wraps an abstract syntax tree ([[scala.reflect.api.Trees#Tree]]) and tags it with its type ([[scala.reflect.api.Types#Type]]).
  *
@@ -29,7 +29,9 @@ import scala.reflect.runtime.{universe => ru}
  *  while, on the other hand, compile-time reflection via macros provides an easier way to instantiate exprs,
  *  described in [[scala.reflect.macros.Aliases]].
  *
- *  Known issue: exprs are marked as serializable, but this functionality is not yet implemented.
+ *  === Known issues ===
+ *
+ *  Exprs are marked as serializable, but this functionality is not yet implemented.
  *  An issue tracker entry: [[https://issues.scala-lang.org/browse/SI-5919 https://issues.scala-lang.org/browse/SI-5919]]
  *  has been created to track the implementation of this feature.
  */

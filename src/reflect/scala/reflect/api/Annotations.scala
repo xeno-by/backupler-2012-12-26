@@ -4,7 +4,7 @@ package api
 import scala.collection.immutable.ListMap
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines annotations and operations on them.
- *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  Scala reflection supports:
  *    1. Annotations on definitions or types produced by the Scala compiler, i.e. subtypes of both
@@ -14,8 +14,6 @@ import scala.collection.immutable.ListMap
  *    1. Annotations on definitions produced by the Java compiler, i.e. subtypes of [[java.lang.annotation.Annotation]]
  *    attached to program definitions. When read by Scala reflection, the [[scala.annotation.ClassfileAnnotation]] trait
  *    is automatically added as a subclass to every Java annotation.
- *
- *  === Annotation API ===
  *
  *  First of all [[scala.reflect.api.Annotations#Annotation]] provides `tpe`, which describes the type of the annotation.
  *  Depending on the superclasses of `tpe`, there are two flavors of annotations.
@@ -38,7 +36,7 @@ import scala.collection.immutable.ListMap
  *  to analyze them. We acknowledge that this process can be made more convenient and created [[https://issues.scala-lang.org/browse/SI-6423 an issue]] in the issue tracker
  *  to discuss possible improvements and track progress.
  *
- *  === How to load annotations ===
+ *  === Example ===
  *
  *  Entry points to the annotation API are [[scala.reflect.api.Symbols#Symbol.annotations]] (for definition annotations)
  *  and [[scala.reflect.api.Types#AnnotatedType]] (for type annotations).
@@ -56,9 +54,7 @@ import scala.collection.immutable.ListMap
  *  See [[scala.annotation.meta.package]] for more information.
  *
  *  To get annotations attached to a type, simply pattern match that type against [[scala.reflect.api.Types#AnnotatedType]].
- *
- *  === Example ===
- *
+
  *  {{{
  *  import scala.reflect.runtime.universe._
  *

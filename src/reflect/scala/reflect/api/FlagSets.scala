@@ -4,7 +4,7 @@ package api
 import scala.language.implicitConversions
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines flag sets and operations on them.
- *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  Flags are used to provide modifiers for abstract syntax trees that represent definitions
  *  via the `flags` field of [[scala.reflect.api.Trees#Modifiers]]. Trees that accept modifiers are:
@@ -25,7 +25,9 @@ import scala.language.implicitConversions
  *  Unlike trees, symbols don't expose flags, but rather provide `isXXX` test methods (e.g. `isFinal` can be used to test finality). These test methods
  *  might require an upcast with `asTerm`, `asType` or `asClass` as some flags only make sense for certain flavors of symbols.
  *
- *  Known issue: this API is considered to be a candidate for redesign. It is quite probable that in future releases of the reflection API
+ *  === Known issues ===
+ *
+ *  This API is considered to be a candidate for redesign. It is quite probable that in future releases of the reflection API
  *  flag sets will be replaced with something else.
  */
 trait FlagSets { self: Universe =>

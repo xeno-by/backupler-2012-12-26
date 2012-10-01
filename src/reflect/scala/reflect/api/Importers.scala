@@ -2,7 +2,7 @@ package scala.reflect
 package api
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines importers and operations on them.
- *  @see [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  As described in [[scala.reflect.api.package]], reflection artifacts are contained in universes.
  *  Typically all processing happens within a single universe (e.g. a compile-time macro universe
@@ -21,14 +21,18 @@ package api
  *  it is programmer's responsibility to make sure that imports don't distort semantics (e.g. that
  *  `foo.bar.Baz` in the source universe means the same that `foo.bar.Baz` does in the target universe).
  *
- *  Known issue: importers didn't undergo as much testing as most of the reflection API did,
+ *  === Known issues ===
+ *
+ *  Importers didn't undergo as much testing as most of the reflection API did,
  *  so they might be flaky from time to time. Please report issues if you encounter them.
  *
- *  Known issue: importers are currently not mirror-aware, they always use `rootMirror`
+ *  Importers are currently not mirror-aware, they always use `rootMirror`
  *  of the target universe to resolve symbols. This might cause troubles in cases when the target universe
  *  need a non-standard way of symbol resolution (e.g. a classloader that's different from the default one).
  *  We have created [[https://issues.scala-lang.org/browse/SI-6241 https://issues.scala-lang.org/browse/SI-6241]],
  *  an issue in the issue tracker, to track the implementation of this feature.
+ *
+ *  === Example ===
  *
  *  Here's how one might implement a macro that performs compile-time evaluation of its argument
  *  by using a runtime compiler to compile and evaluate a tree that belongs to a compile-time compiler:
