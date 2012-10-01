@@ -4,6 +4,9 @@ package api
 /**
  * The Scala reflection cake.
  *
+ * See [[scala.reflect.api.package the overview page]] to find out how to get started with Scala reflection API.
+ * This page lists the most important layers of the cake, and describes paculiarities of cake APIs.
+ *
  * The reflection library is structured according to the 'cake pattern'. The main layer
  * resides in package [[scala.reflect.api]] and defines an interface to the following main types:
  *
@@ -20,7 +23,7 @@ package api
  * Each of these types are defined in their own enclosing traits, which are ultimately all inherited by class
  * [[scala.reflect.api.Universe Universe]]. The main universe defines a minimal interface to the above types.
  * Universes that provide additional functionality such as deeper introspection or runtime code generation,
- * are defined in packages [[scala.reflect.api]] and `scala.tools.reflect`.
+ * are defined in packages [[scala.reflect.macros]] and `scala.tools.reflect`.
  *
  * The cake pattern employed here requires to write certain Scala idioms with more indirections that usual.
  * What follows is a description of these indirections, which will help to navigate the Scaladocs easily.
