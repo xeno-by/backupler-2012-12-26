@@ -648,13 +648,11 @@ trait Printers extends api.Printers { self: SymbolTable =>
 
   def show(name: Name): String = name match {
     case tpnme.WILDCARD => "tpnme.WILDCARD"
-    case tpnme.ROOT => "tpnme.ROOT"
     case tpnme.EMPTY => "tpnme.EMPTY"
     case tpnme.ERROR => "tpnme.ERROR"
     case tpnme.PACKAGE => "tpnme.PACKAGE"
     case tpnme.WILDCARD_STAR => "tpnme.WILDCARD_STAR"
     case nme.WILDCARD => "nme.WILDCARD"
-    case nme.ROOT => "nme.ROOT"
     case nme.EMPTY => "nme.EMPTY"
     case nme.ERROR => "tpnme.ERROR"
     case nme.PACKAGE => "nme.PACKAGE"
