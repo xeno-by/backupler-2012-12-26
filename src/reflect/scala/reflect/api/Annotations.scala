@@ -98,25 +98,39 @@ trait Annotations { self: Universe =>
    */
   implicit val AnnotationTag: ClassTag[Annotation]
 
-  /** The constructor/deconstructor for `Annotation` instances. */
+   /** The constructor/deconstructor for `Annotation` instances. */
    val Annotation: AnnotationExtractor
 
   /** An extractor class to create and pattern match with syntax `Annotation(atp, scalaArgs, javaArgs)`.
-   *  Here, `tpe` is the annotation type, `scalaArgs` the arguments, and `javaArgs` the annotation's key-value pairs.
+   *  Here, `tpe` is the annotation type, `scalaArgs` the payload of Scala annotations, and `javaArgs` the payload of Java annotations.
    */
   abstract class AnnotationExtractor {
     def apply(tpe: Type, scalaArgs: List[Tree], javaArgs: ListMap[Name, JavaArgument]): Annotation
     def unapply(ann: Annotation): Option[(Type, List[Tree], ListMap[Name, JavaArgument])]
   }
 
+  /** API of `Annotation` instances. */
   trait AnnotationApi {
+    /** The type of the annotation. */
     def tpe: Type
+
+    /** Payload of the Scala annotation: a list of abstract syntax trees that represent the argument.
+     *  Empty for Java annotations.
+     */
     def scalaArgs: List[Tree]
+
+    /** Payload of the Java annotation: a list of name-value pairs.
+     *  Empty for Scala annotations.
+     */
     def javaArgs: ListMap[Name, JavaArgument]
   }
 
   /** A Java annotation argument */
   type JavaArgument >: Null <: AnyRef
+
+  /** A tag that preserves the identity of the `JavaArgument` abstract type from erasure.
+   *  Can be used for pattern matching, instance tests, serialization and likes.
+   */
   implicit val JavaArgumentTag: ClassTag[JavaArgument]
 
   /** A literal argument to a Java annotation as `"Use X instead"` in `@Deprecated("Use X instead")`*/
@@ -138,7 +152,9 @@ trait Annotations { self: Universe =>
     def unapply(arg: LiteralArgument): Option[Constant]
   }
 
+  /** API of `LiteralArgument` instances. */
   trait LiteralArgumentApi {
+    /** The underlying compile-time constant value. */
     def value: Constant
   }
 
@@ -162,7 +178,9 @@ trait Annotations { self: Universe =>
     def unapply(arg: ArrayArgument): Option[Array[JavaArgument]]
   }
 
+  /** API of `ArrayArgument` instances. */
   trait ArrayArgumentApi {
+    /** The underlying array of Java annotation arguments. */
     def args: Array[JavaArgument]
   }
 
@@ -186,7 +204,9 @@ trait Annotations { self: Universe =>
     def unapply(arg: NestedArgument): Option[Annotation]
   }
 
+  /** API of `NestedArgument` instances. */
   trait NestedArgumentApi {
+    /** The underlying nested annotation. */
     def annotation: Annotation
   }
 }
