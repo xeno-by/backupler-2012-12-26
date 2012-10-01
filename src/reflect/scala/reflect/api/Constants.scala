@@ -30,11 +30,11 @@ package api
  *  Class references are represented as instances of [[scala.reflect.api.Types#Type]]
  *  (because when the Scala compiler processes a class reference, the underlying runtime class might not yet have been compiled).
  *  To convert such a reference to a runtime class, one should use the `runtimeClass` method of a mirror such as [[scala.reflect.api.Mirrors#RuntimeMirror]]
- *  (the simplest way to get such a mirror is using [[scala.reflect.api.package#currentMirror]]).
+ *  (the simplest way to get such a mirror is using [[scala.reflect.runtime.package#currentMirror]]).
  *
  *  Enumeration value references are represented as instances of [[scala.reflect.api.Symbols#Symbol]], which on JVM point to methods
  *  that return underlying enum values. To inspect an underlying enumeration or to get runtime value of a reference to an enum,
- *  one should use a [[scala.reflect.api.Mirrors#RuntimeMirror]] (the simplest way to get such a mirror is again [[scala.reflect.api.package#currentMirror]]).
+ *  one should use a [[scala.reflect.api.Mirrors#RuntimeMirror]] (the simplest way to get such a mirror is again [[scala.reflect.runtime.package#currentMirror]]).
 
  *  {{{
  *  enum JavaSimpleEnumeration { FOO, BAR }

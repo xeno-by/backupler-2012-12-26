@@ -22,7 +22,7 @@ import scala.reflect.runtime.{universe => ru}
  *  migration of a given expression to another mirror. Migration means that all symbolic references
  *  to classes/objects/packages in the expression are re-resolved within the new mirror
  *  (typically using that mirror's classloader). Default universe of an expr is typically
- *  [[scala.reflect.api.package#universe]], default mirror is typically [[scala.reflect.api.package#currentMirror]].
+ *  [[scala.reflect.runtime.package#universe]], default mirror is typically [[scala.reflect.runtime.package#currentMirror]].
  *
  *  Exprs can also be created manually, but then the burden of providing a TreeCreator lies on the programmer.
  *  However, on the one hand, manual creation is very rarely needed when working with runtime reflection,

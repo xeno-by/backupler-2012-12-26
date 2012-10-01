@@ -4,7 +4,7 @@ package api
 /**
  * The Scala reflection cake.
  *
- * See [[scala.reflect.api.package the overview page]] to find out how to get started with Scala reflection API.
+ * See [[scala.reflect.api.package the overview page]] for a description of universes and infomation on getting started with Scala reflection API.
  * This page lists the most important layers of the cake, and describes paculiarities of cake APIs.
  *
  * The reflection library is structured according to the 'cake pattern'. The main layer

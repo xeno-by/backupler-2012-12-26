@@ -19,7 +19,7 @@ import scala.language.implicitConversions
  *  For example, a private final class is written as followed: `ClassDef(Modifiers(PRIVATE | FINAL), newTypeName("C"), Nil, ...)`.
  *
  *  The list of all available flags is defined in [[scala.reflect.api.FlagSets#FlagValues]], available via the [[scala.reflect.api.FlagSets#Flag]]
- *  (typically one writes a blanket import for that, e.g. `import scala.reflect.api.universe.Flag._`).
+ *  (typically one writes a blanket import for that, e.g. `import scala.reflect.runtime.universe.Flag._`).
  *
  *  Definition trees are compiled down to symbols, so flags on modifiers of such trees are transformed into flags on the resulting symbols.
  *  Unlike trees, symbols don't expose flags, but rather provide `isXXX` test methods (e.g. `isFinal` can be used to test finality). These test methods

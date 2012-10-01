@@ -42,7 +42,7 @@ import scala.collection.immutable.ListMap
  *  and [[scala.reflect.api.Types#AnnotatedType]] (for type annotations).
  *
  *  To get annotations attached to a definition, first load the corresponding symbol (either explicitly using a [[scala.reflect.api.Mirror]]
- *  such as [[scala.reflect.api.package#currentMirror]]
+ *  such as [[scala.reflect.runtime.package#currentMirror]]
  *  or implicitly using [[scala.reflect.api.TypeTags#typeOf]] and then either acquiring its `typeSymbol` or navigating its `members`).
  *  After the symbol is loaded, call its `annotations` method.
  *

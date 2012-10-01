@@ -1,18 +1,14 @@
 package scala.reflect
 package api
 
-trait JavaUniverse extends Universe with Mirrors { self =>
-
-  type RuntimeClass = java.lang.Class[_]
-
-  override type Mirror >: Null <: JavaMirror
-
-  trait JavaMirror extends scala.reflect.api.Mirror[self.type] with RuntimeMirror {
-    val classLoader: ClassLoader
-    override def toString = s"JavaMirror with ${runtime.ReflectionUtils.show(classLoader)}"
-  }
-
-  def runtimeMirror(cl: ClassLoader): Mirror
+/** A refinement of [[scala.reflect.api.Universe]] for runtime reflection using JVM classloaders.
+ *
+ *  The refinement consists of an upgrade to the mirror API, which gets extended from [[scala.reflect.api.Mirror]]
+ *  to [[scala.reflect.api.JavaMirrors#JavaMirror]].
+ *
+ *  See [[scala.reflect.api.package the overview page]] for details on how to use runtime reflection.
+ */
+trait JavaUniverse extends Universe with JavaMirrors { self =>
 
   override def typeTagToManifest[T: ClassTag](mirror0: Any, tag: Universe # TypeTag[T]): Manifest[T] = {
     // SI-6239: make this conversion more precise
