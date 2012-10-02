@@ -1,13 +1,8 @@
 package scala.reflect
 package api
 
-/**
- * Defines the type hierachy for types.
- *
- * Note: Because of implementation details, some type factories have return type `Type`
- * instead of a more precise type.
- *
- * @see [[scala.reflect]] for a description on how the class hierarchy is encoded here.
+/** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines types and operations on them.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  */
 trait Types { self: Universe =>
 
@@ -223,6 +218,7 @@ trait Types { self: Universe =>
 
   /** The API that all this types support */
   trait ThisTypeApi extends TypeApi { this: ThisType =>
+    /** The underlying class symbol. */
     val sym: Symbol
   }
 
@@ -255,7 +251,10 @@ trait Types { self: Universe =>
 
   /** The API that all single types support */
   trait SingleTypeApi extends TypeApi { this: SingleType =>
+    /** The type of the qualifier. */
     val pre: Type
+
+    /** The underlying symbol. */
     val sym: Symbol
   }
   /** The `SuperType` type is not directly written, but arises when `C.super` is used
@@ -286,7 +285,14 @@ trait Types { self: Universe =>
 
   /** The API that all super types support */
   trait SuperTypeApi extends TypeApi { this: SuperType =>
+    /** The type of the qualifier.
+     *  See the example for [[scala.reflect.api.Trees#SuperExtractor]].
+     */
     val thistpe: Type
+
+    /** The type of the selector.
+     *  See the example for [[scala.reflect.api.Trees#SuperExtractor]].
+     */
     val supertpe: Type
   }
   /** The `ConstantType` type is not directly written in user programs, but arises as the type of a constant.
@@ -316,6 +322,7 @@ trait Types { self: Universe =>
 
   /** The API that all constant types support */
   trait ConstantTypeApi extends TypeApi { this: ConstantType =>
+    /** The compile-time constant underlying this type. */
     val value: Constant
   }
 
@@ -352,8 +359,17 @@ trait Types { self: Universe =>
 
   /** The API that all type refs support */
   trait TypeRefApi extends TypeApi { this: TypeRef =>
+    /** The prefix of the type reference.
+     *  Is equal to `NoPrefix` if the prefix is not applicable.
+     */
     val pre: Type
+
+    /** The underlying symbol of the type reference. */
     val sym: Symbol
+
+    /** The arguments of the type reference.
+     *  Is equal to `Nil` if the arguments are not provided.
+     */
     val args: List[Type]
   }
 
@@ -400,7 +416,10 @@ trait Types { self: Universe =>
 
   /** The API that all refined types support */
   trait RefinedTypeApi extends TypeApi { this: RefinedType =>
+    /** The superclasses of the type. */
     val parents: List[Type]
+
+    /** The scope that holds the definitions comprising the type. */
     val decls: Scope
   }
 
@@ -436,8 +455,13 @@ trait Types { self: Universe =>
 
   /** The API that all class info types support */
   trait ClassInfoTypeApi extends TypeApi { this: ClassInfoType =>
+    /** The superclasses of the class type. */
     val parents: List[Type]
+
+    /** The scope that holds the definitions comprising the class type. */
     val decls: Scope
+
+    /** The symbol underlying the class type. */
     val typeSymbol: Symbol
   }
 
@@ -474,7 +498,10 @@ trait Types { self: Universe =>
 
   /** The API that all method types support */
   trait MethodTypeApi extends TypeApi { this: MethodType =>
+    /** The symbols that correspond to the parameters of the method. */
     val params: List[Symbol]
+
+    /** The result type of the method. */
     val resultType: Type
   }
 
@@ -501,6 +528,7 @@ trait Types { self: Universe =>
 
   /** The API that all nullary method types support */
   trait NullaryMethodTypeApi extends TypeApi { this: NullaryMethodType =>
+    /** The result type of the method. */
     val resultType: Type
   }
 
@@ -528,7 +556,10 @@ trait Types { self: Universe =>
 
   /** The API that all polymorphic types support */
   trait PolyTypeApi extends TypeApi { this: PolyType =>
+    /** The symbols corresponding to the type parameters. */
     val typeParams: List[Symbol]
+
+    /** The underlying type. */
     val resultType: Type
   }
 
@@ -557,7 +588,10 @@ trait Types { self: Universe =>
 
   /** The API that all existential types support */
   trait ExistentialTypeApi extends TypeApi { this: ExistentialType =>
+    /** The symbols corresponding to the `forSome` clauses of the existential type. */
     val quantified: List[Symbol]
+
+    /** The underlying type of the existential type. */
     val underlying: Type
   }
 
@@ -586,8 +620,13 @@ trait Types { self: Universe =>
 
   /** The API that all annotated types support */
   trait AnnotatedTypeApi extends TypeApi { this: AnnotatedType =>
+    /** The annotations. */
     val annotations: List[Annotation]
+
+    /** The annotee. */
     val underlying: Type
+
+    /** A symbol that represents the annotated type itself. */
     val selfsym: Symbol
   }
 
@@ -622,7 +661,14 @@ trait Types { self: Universe =>
 
   /** The API that all type bounds support */
   trait TypeBoundsApi extends TypeApi { this: TypeBounds =>
+    /** The lower bound.
+     *  Is equal to `definitions.NothingTpe` if not specified explicitly.
+     */
     val lo: Type
+
+    /** The upper bound.
+     *  Is equal to `definitions.AnyTpe` if not specified explicitly.
+     */
     val hi: Type
   }
 
@@ -661,6 +707,7 @@ trait Types { self: Universe =>
 
   /** The API that all this types support */
   trait BoundedWildcardTypeApi extends TypeApi { this: BoundedWildcardType =>
+    /** Type bounds for the wildcard type. */
     val bounds: TypeBounds
   }
 

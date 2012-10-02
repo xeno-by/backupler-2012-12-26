@@ -5,7 +5,7 @@
 package scala.reflect
 package api
 
-/** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines annotations and operations on them.
+/** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines trees and operations on them.
  *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  *
  *  Tree is the basis for scala's abstract syntax. The nodes are
@@ -2045,7 +2045,7 @@ trait Trees { self: Universe =>
     val hi: Tree
   }
 
-  /** Document me! */
+  /** TODO Document me! */
   type ExistentialTypeTree >: Null <: TypTree with ExistentialTypeTreeApi
 
   /** A tag that preserves the identity of the `ExistentialTypeTree` abstract type from erasure.

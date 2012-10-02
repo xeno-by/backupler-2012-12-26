@@ -1,10 +1,8 @@
 package scala.reflect
 package api
 
-/**
- * Defines the type hierachy for symbols
- *
- * @see [[scala.reflect]] for a description on how the class hierarchy is encoded here.
+/** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines symbols and operations on them.
+ *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
  */
 trait Symbols { self: Universe =>
 
@@ -357,11 +355,14 @@ trait Symbols { self: Universe =>
 
     /******************* helpers *******************/
 
-    /** ...
+    /** Provides an alternate if symbol is a NoSymbol.
      */
     def orElse(alt: => Symbol): Symbol
 
-    /** ...
+    /** Filters the underlying alternatives (or a single-element list
+     *  composed of the symbol itself if the symbol is not overloaded).
+     *  Returns an overloaded symbol is there are multiple matches.
+     *  Returns a NoSymbol if there are no matches.
      */
     def filter(cond: Symbol => Boolean): Symbol
 
@@ -370,7 +371,7 @@ trait Symbols { self: Universe =>
      */
     def map(f: Symbol => Symbol): Symbol
 
-    /** ...
+    /** Does the same as `filter`, but crashes if there are multiple matches.
      */
     def suchThat(cond: Symbol => Boolean): Symbol
   }
