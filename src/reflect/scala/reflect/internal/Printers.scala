@@ -534,6 +534,12 @@ trait Printers extends api.Printers { self: SymbolTable =>
 
       depth += 1
       args foreach {
+        case expr: Expr[_] =>
+          print("Expr")
+          if (printTypes) print(expr.staticType)
+          print("(")
+          print(expr.tree)
+          print(")")
         case EmptyTree =>
           print("EmptyTree")
         case emptyValDef: AnyRef if emptyValDef eq self.emptyValDef =>
@@ -581,6 +587,10 @@ trait Printers extends api.Printers { self: SymbolTable =>
           if (printIds) print("#", sym.id)
           if (printKinds) print("#", sym.abbreviatedKindString)
           if (printMirrors) print("%M", footnotes.put[scala.reflect.api.Mirror[_]](mirrorThatLoaded(sym)))
+        case tag: TypeTag[_] =>
+          print("TypeTag(", tag.tpe, ")")
+        case tag: WeakTypeTag[_] =>
+          print("WeakTypeTag(", tag.tpe, ")")
         case tpe: Type =>
           val defer = printTypesInFootnotes && !printingFootnotes
           if (defer) print("[", footnotes.put(tpe), "]")

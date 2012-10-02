@@ -107,7 +107,7 @@ trait Constants {
   }
 
   /** The API of `Constant` instances.
-   *  The main source of information about exprs is the [[scala.reflect.api.Constants]] page.
+   *  The main source of information about constants is the [[scala.reflect.api.Constants]] page.
    */
   abstract class ConstantApi {
     /** Payload of the constant. */
