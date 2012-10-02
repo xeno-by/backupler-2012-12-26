@@ -3,6 +3,162 @@ package api
 
 /** A slice of [[scala.reflect.api.Universe the Scala reflection cake]] that defines symbols and operations on them.
  *  See [[scala.reflect.api.Universe]] for a description of how the reflection API is encoded with the cake pattern.
+ *
+ *  === Symbols from a compile-time perspective ===
+ *
+ *  [[http://dcsobral.blogspot.ch/2012/08/json-serialization-with-reflection-in.html To quote Daniel Sobral]],
+ *  anything you define in Scala has a symbol. If you give something a name,
+ *  then it has a symbol associated with it. If you didn't give it a name, but you could have, then it has a symbol.
+ *
+ *  Symbols are used by the Scala compiler to establish bindings. When typechecking a Scala program,
+ *  the compiler populates [[scala.reflect.api.Trees#RefTrees ref trees]], such as [[scala.reflect.api.Trees#Ident Ident]]
+ *  (references to identifiers) and [[scala.reflect.api.Trees#Select Select]] (references to members)
+ *  with symbols that represent the declarations being referred to. Populating means setting the `symbol`
+ *  field to a non-empty value.
+ *
+ *  Here's an example of how trees look after the `typer` phase of the Scala compiler (this phase performs the typechecking).
+ *  {{{
+ *  >cat Test.scala
+ *  def foo[T: TypeTag](x: Any) = x.asInstanceOf[T]
+ *
+ *  >scalac -Xprint:typer -uniqid Test.scala
+ *  [[syntax trees at end of typer]]// Scala source: Test.scala
+ *  def foo#8339
+ *    [T#8340 >: Nothing#4658 <: Any#4657]
+ *    (x#9529: Any#4657)
+ *    (implicit evidence$1#9530: TypeTag#7861[T#8341])
+ *    : T#8340 =
+ *  x#9529.asInstanceOf#6023[T#8341];
+ *  }}}
+ *
+ *  Shortly put, we write a small snippet and then compile it with scalac, asking the compiler to dump the trees
+ *  after the typer phase, printing unique ids of the symbols assigned to trees (if any).
+ *
+ *  The resulting printout shows that identifiers have been linked to corresponding definitions.
+ *  For example, on the one hand, the `ValDef("x", ...)`, which represents the parameter of the method `foo`,
+ *  defines a method symbol with `id=9529`. On the other hand, the `Ident("x")` in the body of the method
+ *  got its `symbol` field set to the same symbol, which establishes the binding.
+ *
+ *  In the light of this discussion, it might come as a surprise that the definition of the type parameter `T`
+ *  has a symbol with `id=8340`, whereas references to this type parameter all have a symbol with `id=8341`.
+ *  This is the only exception from the general principe outlined above. It happens because the Scala compiler
+ *  skolemizes type parameters (creates new symbols very similar to the original ones) before entering scopes
+ *  that define these parameters. This is an advanced feature of Scala, and the knowledge of it is needed only
+ *  when writing complex macros, but symbols in the macro universe [[scala.reflect.macros.Universe]] have the
+ *  `deskolemize` method, which goes back from skolems to the originating type parameters.
+ *
+ *  === Symbols from a runtime perspective ===
+ *
+ *  From the point of view of a runtime reflection framework, symbols are akin to [[java.lang.reflect.Member]] from Java
+ *  and [[System.Reflection.MemberInfo]] from .NET. But not only they represent members - they also represent
+ *  classes, objects and even packages.
+ *
+ *  Also similarly to the base classes in the reflection facilities of JVM and .NET, Scala symbols have subclasses
+ *  that describe particular flavors of definitions. [[scala.reflect.api.Symbols#TermSymbol]] models term definitions
+ *  (such as lazy and eager vals, vars and parameters of methods). Its subclasses are [[scala.reflect.api.Symbols#MethodSymbol]]
+ *  and [[scala.reflect.api.Symbols#ModuleSymbol]] (representing "modules", which in Scala compiler speak mean "objects").
+ *  [[scala.reflect.api.Symbols#TypeSymbol]] along with its subclass [[scala.reflect.api.Symbols#ClassSymbol]]
+ *  describes type definitions in Scala (type aliases, type members, type parameters, classes and traits).
+ *
+ *  Most reflection APIs that return symbols return non-specific [[scala.reflect.api.Symbols#Symbol]], because upon failure
+ *  they don't raise exceptions, but rather produce `NoSymbol`, a special singleton, which is a null object for symbols.
+ *  Therefore to use such APIs one has to first check whether a callee returned a valid symbol and, if yes, then perform
+ *  a cast using one of the `asTerm`, `asMethod`, `asModule`, `asType` or `asClass` methods. This is arguably inconvenient
+ *  and might be improved in the future.
+ *
+ *  To get a symbol that corresponds to a top-level class or object, one can use the `staticClass` and `staticModule`
+ *  methods of [[scala.reflect.api.Mirror]]. To get a symbol that corresponds to a certain member, there are `members`
+ *  and `declarations` methods of [[scala.reflect.api.Types#Type]], which brings the discussion to the next point: type signatures.
+ *
+ *  Each symbol has a type signature, which describes its type and is available via the `typeSignature` method
+ *  on [[scala.reflect.api.Symbols#Symbol]]. Classes have signatures of the [[scala.reflect.api.Types#ClassInfoType]] type,
+ *  which knows the list of its members and declarations. Modules per se don't have interesting signatures. To access members
+ *  of modules, one first has to obtain a module class (using the `moduleClass` method) and then inspect its signature.
+ *
+ *  Symbols are at the heart of the reflection API. Along with the type signatures, which are arguably the most important
+ *  use of reflection, they provide comprehensive information about the underlying definitions. This includes various
+ *  `isXXX` test methods such as `isPublic` or `isFinal`, `params` and `returnType` methods for method symbols,
+ *  `baseClasses` for class symbols and so on. Be prepared - some of these methods don't make sense on the ultimate
+ *   base class Symbol, so they are declared in subclasses.
+ *
+ *  === Example ===
+ *
+ *  In this example we'll try to get a hold on a symbol that represents the `map` method of `List`,
+ *  and then do something interesting with it.
+ *
+ *  First of all, to obtain a symbol, one needs to load its enclosing top-level class or module.
+ *  There are two ways of doing that. The first one is getting a symbol by its name using a mirror
+ *  (refer to [[scala.reflect.api.package the reflection overview]] for information about mirrors).
+ *  Another one is getting a type with [[scaa.reflect.api.Types#typeOf]] and using its `typeSymbol` method.
+ *  The second approach is preferable, because it's typesafe, but sometimes it's unavailable.
+ *
+ *  {{{
+ *  scala> import scala.reflect.runtime.universe._
+ *  import scala.reflect.runtime.universe._
+ *
+ *  scala> val cm = runtimeMirror(getClass.getClassLoader)
+ *  cm: reflect.runtime.universe.Mirror = JavaMirror with ...
+ *
+ *  scala> val list = cm.staticClass("scala.List")
+ *  list: reflect.runtime.universe.ClassSymbol = class List
+ *
+ *  scala> val list = typeOf[List[_]].typeSymbol
+ *  list: reflect.runtime.universe.Symbol = class List
+ *  }}}
+ *
+ *  Now when the enclosing class is obtained, there's a straight path to getting its member
+ *  using `typeSignature` and `member` methods discussed above:
+ *
+ *  {{{
+ *  scala> val map = list.typeSignature.member("map": TermName).asMethod
+ *  map: reflect.runtime.universe.MethodSymbol = method map
+ *
+ *  scala> map.params
+ *  res0: List[List[reflect.runtime.universe.Symbol]] = List(List(value f), List(value bf))
+ *
+ *  scala> val filter = map.params(0)(0)
+ *  filter: reflect.runtime.universe.Symbol = value f
+ *
+ *  scala> filter.name
+ *  res1: reflect.runtime.universe.Name = f
+ *
+ *  scala> filter.typeSignature
+ *  res2: reflect.runtime.universe.Type = A => B
+ *  }}}
+ *
+ *  Be careful though, because overloaded methods are represented as instances of TermSymbol
+ *  with multiple `alternatives` that have to be resolved manually. For example, a lookup
+ *  for a member named `mkString` will produce not a MethodSymbol, but a TermSymbol:
+ *
+ *  {{{
+ *  scala> list.typeSignature.member("mkString": TermName)
+ *  res1: reflect.runtime.universe.Symbol = value mkString
+ *
+ *  scala> val mkString = list.typeSignature.member("mkString": TermName).asTerm
+ *  mkString: reflect.runtime.universe.TermSymbol = value mkString
+ *
+ *  scala> mkString.isMethod
+ *  res0: Boolean = false
+ *
+ *  scala> mkString.alternatives
+ *  res1: List[reflect.runtime.universe.Symbol] = List(method mkString, method mkString, method mkString)
+ *
+ *  scala> mkString.alternatives foreach println
+ *  method mkString
+ *  method mkString
+ *  method mkString
+ *
+ *  scala> mkString.alternatives foreach (alt => println(alt.typeSignature))
+ *  => String
+ *  (sep: String)String
+ *  (start: String, sep: String, end: String)String
+ *  }}}
+ *
+ *  Once one has a symbol, that symbol can be used for reflective invocations. For example,
+ *  having a TermSymbol corresponding to a field it's possible to get or set a value of that field.
+ *  Having a MethodSymbol makes it possible to invoke the corresponding methods. ClassSymbols
+ *  can be instantiated. ModuleSymbols can provide corresponding singleton instances. This is described
+ *  in detail on [[scala.reflect.api.package the reflection overview page]].
  */
 trait Symbols { self: Universe =>
 
