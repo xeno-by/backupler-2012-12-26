@@ -63,7 +63,19 @@ import scala.reflect.api.{Universe => ApiUniverse}
  *
  *  === Examples ===
  *
- *  To be implemented
+ *  This page focuses on typical tasks that are performed with runtime reflection: getting a class or an object, loading and inspecting its members
+ *  and invoking them at runtime.
+ *
+ *  However there's much more to Scala reflection, with examples on other documentation pages answering the following questions:
+ *    - [[scala.reflect.api.Symbols How to get a Symbol that corresponds to a given definition?]]
+ *    - [[scala.reflect.api.Types How to get a Type of some Scala code?]]
+ *    - [[scala.reflect.api.Trees How to get a Tree that corresponds to some Scala code?]]
+ *    - [[scala.reflect.api.Trees How to parse a string into a Tree?]]
+ *    - [[scala.reflect.api.Trees How to compile or evaluate a Tree?]]
+ *    - [[scala.reflect.api.Annotations How to get Java and/or Scala annotations attached to a given definition?]]
+ *    - [[scala.reflect.api.Printers How to inspect internal structure of reflection artifacts?]]
+ *    - [[scala.reflect.api.Importers How to move reflection artifacts from one universe to another?]]
+ *    - [[scala.reflect.macros.package How to use compile-time reflection in macros?]]
  */
 package object api {
 

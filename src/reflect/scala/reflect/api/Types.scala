@@ -11,6 +11,8 @@ package api
  *  a definition, a type represents the whole structure of that definition. It is the union of all definitions that
  *  compose a class, the description of what goes into a method and what comes out, etc.
  *
+ *  === Instantiating types ===
+ *
  *  There are three ways to instantiate types. The simplest one involves the [[scala.reflect.api.TypeTags#typeOf]] method,
  *  which takes a type argument and produces a `Type` instance that represents that argument. For example, `typeOf[List[Int]]`
  *  produces a [[scala.reflect.api.Types#TypeRef]], which corresponds to a type `List` applied to a type argument `Int`.
@@ -29,6 +31,8 @@ package api
  *  This is necessary only in cases when `typeOf` or `typeTag` cannot be applied, because the type cannot be spelt out
  *  in a Scala snippet, usually when writing macros. Manual construction requires deep knowledge of Scala compiler internals
  *  and shouldn't be used, when there are other alternatives available.
+ *
+ *  === Using types ===
  *
  *  Arguably the most useful application of types is looking up members. Every type has `members` and `declarations` methods (along with
  *  their singular counterparts `member` and `declaration`), which provide the list of definitions associated with that type.
