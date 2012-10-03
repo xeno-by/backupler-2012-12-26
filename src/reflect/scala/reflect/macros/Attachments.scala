@@ -38,8 +38,7 @@ abstract class Attachments { self =>
     (all filter matchesTag[T]).headOption.asInstanceOf[Option[T]]
 
   /** Creates a copy of this attachment with the payload slot of T added/updated with the provided value.
-   *
-   * Replaces an existing payload of the same type, if exists.
+   *  Replaces an existing payload of the same type, if exists.
    */
   def update[T: ClassTag](attachment: T): Attachments { type Pos = self.Pos } =
     new NonemptyAttachments(this.pos, remove[T].all + attachment)
