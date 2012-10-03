@@ -142,9 +142,12 @@ package scala.reflect
  *  }
  *  }}}
  *
- *  An important rul about using macros is separate compilation. To perform macro expansion, compiler
+ *  An important rule about using macros is separate compilation. To perform macro expansion, compiler
  *  needs a macro implementation in executable form. Thus macro implementations need to be compiled before
  *  the main compilation, otherwise compiler will produce `macro implementation not found` errors.
+ *
+ *  In the REPL, however, macros and their usages can be written in the same session. That's because
+ *  the REPL compiles every line of input in a separate compilation run.
  *
  *  {{{
  *  C:/Projects/Kepler/sandbox>scalac Test.scala

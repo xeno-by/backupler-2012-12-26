@@ -2594,7 +2594,7 @@ trait Trees { self: Universe =>
    */
   protected def xtransform(transformer: Transformer, tree: Tree): Tree = throw new MatchError(tree)
 
-  /** The type of modifiers. */
+  /** The type of tree modifiers. */
   type Modifiers >: Null <: AnyRef with ModifiersApi
 
   /** A tag that preserves the identity of the `Modifiers` abstract type from erasure.

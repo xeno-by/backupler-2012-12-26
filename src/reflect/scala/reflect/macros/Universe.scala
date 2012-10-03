@@ -123,6 +123,7 @@ abstract class Universe extends scala.reflect.api.Universe {
    */
   def capturedVariableType(vble: Symbol): Type
 
+  /** The type of compilation runs. */
   type Run <: RunContextApi
 
   /** Compilation run uniquely identifies current invocation of the compiler
@@ -137,6 +138,7 @@ abstract class Universe extends scala.reflect.api.Universe {
     def units: Iterator[CompilationUnit]
   }
 
+  /** The type of compilation units. */
   type CompilationUnit <: CompilationUnitContextApi
 
   /** Compilation unit describes a unit of work of the compilation run.
