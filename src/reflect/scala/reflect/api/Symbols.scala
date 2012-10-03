@@ -144,6 +144,8 @@ package api
  *  res4: reflect.runtime.universe.Type = A => B
  *  }}}
  *
+ *  === Gotcha #1: Overloaded methods ===
+ *
  *  Be careful though, because overloaded methods are represented as instances of TermSymbol
  *  with multiple `alternatives` that have to be resolved manually. For example, a lookup
  *  for a member named `mkString` will produce not a MethodSymbol, but a TermSymbol:
@@ -177,6 +179,28 @@ package api
  *  Having a MethodSymbol makes it possible to invoke the corresponding methods. ClassSymbols
  *  can be instantiated. ModuleSymbols can provide corresponding singleton instances. This is described
  *  in detail on [[scala.reflect.api.package the reflection overview page]].
+ *
+ *  === Gotcha #2: Module classes ===
+ *
+ *  Internally the Scala compiler represents objects with two symbols: a module symbol and a module class symbol.
+ *  The former is a term symbol, used everywhere a module is referenced (e.g. in singleton types or in expressions),
+ *  while the latter is a type symbol, which carries the type signature (i.e. the member list) of the module.
+ *  This implementation detail can be easily seen by compiling a trivial snippet of code. Invoking the Scala
+ *  compiler on `object C` will generate C$.class. That's exactly the module class.
+ *
+ *  Note that module classes are different from companion classes. Say, for `case class C`, the compiler
+ *  will generate three symbols: `type C`, `term C` and (another one) `type C`, where the first type `C`
+ *  represents the class `C` (which contains auto-generated `copy`, `productPrefix`, `productArity` etc) and
+ *  the second type `C` represents the signature of object `C` (which contains auto-generated factory,
+ *  extractor etc). There won't be any name clashes, because the module class isn't added to the symbol table
+ *  directly and is only available through `<module>.moduleClass`. For the sake of completeness, it is possible
+ *  to go back from a module class to a module via `<module class>.module`.
+ *
+ *  Separation between modules and module classes is something that we might eliminate in the future, but for now
+ *  this obscure implementation detail has to be taken into account when working with reflection. On the one hand,
+ *  it is necessary to go to a module class to get a list of members for an object. On the other hand, it is
+ *  necessary to go from a module class back to a module to get a singleton instance of an object. The latter
+ *  scenario is described at Stack Overflow: [[http://stackoverflow.com/questions/12128783 How can I get the actual object referred to by Scala 2.10 reflection?]].
  */
 trait Symbols { self: Universe =>
 

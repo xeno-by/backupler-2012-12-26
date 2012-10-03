@@ -61,10 +61,141 @@ import scala.reflect.api.{Universe => ApiUniverse}
  *    - [[https://issues.scala-lang.org/secure/IssueNavigator.jspa?mode=hide&requestId=10908 Known issues in reflection and macros]]
  *    - [[http://stackoverflow.com/questions/tagged/scala+reflection Questions tagged "scala" and "reflection" at Stack Overflow]]
  *
- *  === Examples ===
+ *  === Using runtime reflection ===
  *
- *  This page focuses on typical tasks that are performed with runtime reflection: getting a class or an object, loading and inspecting its members
- *  and invoking them at runtime.
+ *  Suppose we want to invoke the `head` method on `List(1, 2)`. This can be done in four steps, which include:
+ *  1) setting up the environment, 2) getting to a symbol that represents `head`, 3) creating
+ *  a method mirror for `head`, 4) invoking the method mirror.
+ *
+ *  === Step 1: Setting up the environment ===
+ *
+ *  To do anything with reflection one needs to decide on a universe. The universe of choice for
+ *  runtime reflection is [[scala.reflect.runtime.package#universe scala.reflect.runtime.universe]].
+ *  A commonplace idiom is to do a blanket import `import scala.reflect.runtime.universe._` to get
+ *  access to all types and methods declared inside the universe.
+ *
+ *  {{{
+ *  scala> import scala.reflect.runtime.universe._
+ *  import scala.reflect.runtime.universe._
+ *  }}}
+ *
+ *  The next step is creating a mirror. On JVM mirrors are in one-to-one correspondence with classloaders.
+ *  Another common idiom is to create a mirror from `getClass.getClassLoader`, the classloader of the
+ *  current class. In most cases that will do, but if the structure of classloaders in your application
+ *  is more complex than that, adjust accordingly.
+ *
+ *  {{{
+ *  scala> val cm = runtimeMirror(getClass.getClassLoader)
+ *  cm: reflect.runtime.universe.Mirror = JavaMirror with <translating classloader> of type
+ *  class scala.tools.nsc.interpreter.IMain$TranslatingClassLoader with classpath [(memory)]
+ *  and parent being <url classloader> of type class scala.tools.nsc.util.ScalaClassLoader$
+ *  URLClassLoader with classpath [file:/c:/PROGRA~1/Java/JDK/jre/lib/resources.jar...
+ *  }}}
+ *
+ *  === Step 2: Getting to a symbol that represents `head` ===
+ *
+ *  We start with obtaining a type of `List` to get to the `head` symbol that represents the given method.
+ *  There are three ways of doing that.
+ *
+ *  The best way is to write `typeOf[List[Int]]`, which is applicable when the type
+ *  of the value being inspected is known in advance, and which gives the exact information about the type.
+ *  When the type is dynamic, we have to first obtain a Java class and then convert it to a Scala type,
+ *  e.g. `cm.runtimeClass(list.getClass).toType`. Unfortunately then the information about the type
+ *  suffers from erasure.
+ *
+ *  {{{
+ *  scala> typeOf[List[Int]]
+ *  res0: reflect.runtime.universe.Type = scala.List[Int]
+ *
+ *  scala> cm.classSymbol(List(1, 2).getClass).toType
+ *  res1: reflect.runtime.universe.Type = scala.collection.immutable.::[B]
+ *  }}}
+ *
+ *  A compromise solution, which allows to preserve the exact type information, involves `TypeTag`
+ *  context bounds. If the value being inspected is an argument of a function, then we can make
+ *  the corresponding parameter generic and annotated the introduced type parameter with a type tag.
+ *  After we do that, the compiler will preserve exact types of arguments passed to a function,
+ *  available via `typeOf`.
+ *
+ *  {{{
+ *  scala> def invokeHead(x: Any): Any = {
+ *       | // type of x is unknown, the best we can do is to approximate
+ *       | println(cm.classSymbol(x.getClass).toType)
+ *       | }
+ *  invokeHead: (x: Any)Any
+ *
+ *  scala> invokeHead(List(1, 2))
+ *  scala.collection.immutable.::[B]
+ *
+ *  scala> invokeHead(List("x"))
+ *  scala.collection.immutable.::[B]
+ *
+ *  scala> def invokeHead[T: TypeTag](x: T): Any = {
+ *       | // type of x is preserved by the compiler
+ *       | println(typeOf[T])
+ *       | }
+ *  invokeHead: [T](x: T)(implicit evidence$1: reflect.runtime.universe.TypeTag[T])Any
+ *
+ *  scala> invokeHead(List(1, 2))
+ *  List[Int]
+ *
+ *  scala> invokeHead(List("x"))
+ *  List[java.lang.String]
+ *  }}}
+ *
+ *  Having a type at hand it is straightforward to traverse its members and obtain a symbol
+ *  that represents `head`.
+ *
+ *  {{{
+ *  scala> val head = typeOf[List[Int]].member("head": TermName).asMethod
+ *  head: reflect.runtime.universe.MethodSymbol = method head
+ *  }}}
+ *
+ *  Note the `asMethod` cast following the invocation of `member`. In Scala reflection symbol-returning methods
+ *  don't raise exceptions, but rather produce `NoSymbol`, a special singleton, which is a null object for symbols.
+ *  Therefore to use such APIs one has to first check whether a callee returned a valid symbol and, if yes, then perform
+ *  a cast using one of the `asTerm`, `asMethod`, `asModule`, `asType` or `asClass` methods.
+ *
+ *  Also be careful with overloaded methods, which are represented as instances of `TermSymbol`, not `MethodSymbol`,
+ *  with multiple `alternatives` of type `MethodSymbol` that have to be resolved manually. This and other gotchas with
+ *  symbol loading are discussed on [[scala.reflect.api.Symbols the documentation page about symbols]].
+ *
+ *  === Step 3: Creating a method mirror for `head` ===
+ *
+ *  In Scala reflection, all reflective invocations go through mirrors created with `reflectXXX` methods.
+ *  For example, to get a singleton instance of an `object`, one needs to reflect a `ModuleSymbol` to obtain
+ *  a `ModuleMirror`, which provides the `instance` method.
+ *
+ *  In our case we need to reflect an instance being processed, producing an `InstanceMirror`, then reflect
+ *  a method symbol loaded during the previous step, producing a `MethodMirror`. Finally, method mirrors
+ *  provide the `apply` method that performs reflective invocations.
+ *
+ *  {{{
+ *  scala> val im = cm.reflect(List(1, 2))
+ *  im: reflect.runtime.universe.InstanceMirror = instance mirror for List(1, 2)
+ *
+ *  scala> val mm = im.reflectMethod(head)
+ *  mm: reflect.runtime.universe.MethodMirror = method mirror for
+ *  scala.collection.IterableLike.head: A (bound to List(1, 2))
+ *  }}}
+ *
+ *  === Step 4: Invoking the method mirror ===
+ *
+ *  The final step is straightforward. Reflective invocation of a method is as simple as calling
+ *  the `apply` method of a `MethodMirror`:
+ *
+ *  {{{
+ *  scala> mm()
+ *  res1 @ 758f3dae: Any = 1
+ *  }}}
+ *
+ *  === Conclusion ===
+ *
+ *  As specified in the documentation of traits declared in [[scala.reflect.api.Mirrors]],
+ *  in a similar fashion (by using `reflectXXX` methods), it is possible to:
+ *    - Get and set field values
+ *    - Instantiate classes
+ *    - Obtain singleton instances of objects
  *
  *  However there's much more to Scala reflection, with examples on other documentation pages answering the following questions:
  *    - [[scala.reflect.api.Symbols How to get a Symbol that corresponds to a given definition?]]
