@@ -116,17 +116,17 @@ import scala.language.implicitConversions
  * The previous notion of a [[scala.reflect.ClassManifest]] corresponds to a scala.reflect.ClassTag,
  * The previous notion of a [[scala.reflect.Manifest]] corresponds to scala.reflect.runtime.universe.TypeTag,
  *
- * In Scala 2.10, manifests are deprecated, so it's advisable to migrate them to tags,
- * because manifests will probably be removed in the next major release.
+ * In Scala 2.10 class manifests are deprecated, and manifests are planned to be deprecated in one of the
+ * subsequent point releases. Therefore it's advisable to migrate manifests to tags.
  *
- * In most cases it will be enough to replace ClassManifest with ClassTag and Manifest with TypeTag.
+ * In most cases it is enough to replace `ClassManifest` with `ClassTag` and `Manifest` with `TypeTag`.
  * There are however a few caveats:
  *
- * 1) The notion of OptManifest is no longer supported. Tags can reify arbitrary types, so they are always available.
+ * 1) Tags don't support the notion of `OptManifest`. Tags can reify arbitrary types, so they are always available.
  *
- * 2) There's no equivalent for AnyValManifest. Consider comparing your tag with one of the base tags
+ * 2) There's no equivalent for `AnyValManifest`. Consider comparing your tag with one of the base tags
  *    (defined in the corresponding companion objects) to find out whether it represents a primitive value class.
- *    You can also use `<tag>.tpe.typeSymbol.isPrimitiveValueClass` for that purpose (requires scala-reflect.jar).
+ *    You can also use `<tag>.tpe.typeSymbol.isPrimitiveValueClass`.
  *
  * 3) There's no replacement for factory methods defined in `ClassManifest` and `Manifest` companion objects.
  *    Consider assembling corresponding types using the reflection APIs provided by Java (for classes) and Scala (for types).

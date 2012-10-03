@@ -66,6 +66,8 @@ package api
  *  a cast using one of the `asTerm`, `asMethod`, `asModule`, `asType` or `asClass` methods. This is arguably inconvenient
  *  and might be improved in the future.
  *
+ *  Unlike [[scala.reflect.api.Trees trees]] and [[scala.reflect.api.Types types]], symbols should not be created directly.
+ *  Instead one should load the symbols from the global symbol table maintained by the compiler.
  *  To get a symbol that corresponds to a top-level class or object, one can use the `staticClass` and `staticModule`
  *  methods of [[scala.reflect.api.Mirror]]. To get a symbol that corresponds to a certain member, there are `members`
  *  and `declarations` methods of [[scala.reflect.api.Types#Type]], which brings the discussion to the next point: type signatures.
@@ -74,6 +76,14 @@ package api
  *  on [[scala.reflect.api.Symbols#Symbol]]. Classes have signatures of the [[scala.reflect.api.Types#ClassInfoType]] type,
  *  which knows the list of its members and declarations. Modules per se don't have interesting signatures. To access members
  *  of modules, one first has to obtain a module class (using the `moduleClass` method) and then inspect its signature.
+ *  Members have type signatures of their own: method signatures feature information about parameters and result types,
+ *  type member signatures store upper and lower bounds and so on.
+ *
+ *  One thing to know about type signatures is that `typeSignature` method always returns signatures in the most generic
+ *  way possible, even if the underlying symbol is obtained from an instantiation of a generic type. For example, signature
+ *  of the method `def map[B](f: (A) ⇒ B): List[B]`, which refers to the type parameter `A` of the declaring class `List[A]`,
+ *  will always feature `A`, regardless of whether `map` is loaded from the `List[_]` or from `List[Int]`. To get a signature
+ *  with type parameters appropriately instantiated, one should use `typeSignatureIn`.
  *
  *  Symbols are at the heart of the reflection API. Along with the type signatures, which are arguably the most important
  *  use of reflection, they provide comprehensive information about the underlying definitions. This includes various
@@ -81,7 +91,7 @@ package api
  *  `baseClasses` for class symbols and so on. Be prepared - some of these methods don't make sense on the ultimate
  *   base class Symbol, so they are declared in subclasses.
  *
- *  === Example ===
+ *  === Exploring symbols ===
  *
  *  In this example we'll try to get a hold on a symbol that represents the `map` method of `List`,
  *  and then do something interesting with it.
@@ -113,17 +123,25 @@ package api
  *  scala> val map = list.typeSignature.member("map": TermName).asMethod
  *  map: reflect.runtime.universe.MethodSymbol = method map
  *
+ *  scala> map.typeSignature
+ *  res0: reflect.runtime.universe.Type = [B, That](f: A => B)(implicit bf:
+ *  scala.collection.generic.CanBuildFrom[Repr,B,That])That
+ *
+ *  scala> map.typeSignatureIn(typeOf[List[Int]])
+ *  res1: reflect.runtime.universe.Type = [B, That](f: Int => B)(implicit bf:
+ *  scala.collection.generic.CanBuildFrom[List[Int],B,That])That
+ *
  *  scala> map.params
- *  res0: List[List[reflect.runtime.universe.Symbol]] = List(List(value f), List(value bf))
+ *  res2: List[List[reflect.runtime.universe.Symbol]] = List(List(value f), List(value bf))
  *
  *  scala> val filter = map.params(0)(0)
  *  filter: reflect.runtime.universe.Symbol = value f
  *
  *  scala> filter.name
- *  res1: reflect.runtime.universe.Name = f
+ *  res3: reflect.runtime.universe.Name = f
  *
  *  scala> filter.typeSignature
- *  res2: reflect.runtime.universe.Type = A => B
+ *  res4: reflect.runtime.universe.Type = A => B
  *  }}}
  *
  *  Be careful though, because overloaded methods are represented as instances of TermSymbol
@@ -233,7 +251,9 @@ trait Symbols { self: Universe =>
   /** A special "missing" symbol */
   val NoSymbol: Symbol
 
-  /** The API of symbols */
+  /** The API of symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait SymbolApi { this: Symbol =>
 
     /** The owner of this symbol. This is the symbol
@@ -532,7 +552,9 @@ trait Symbols { self: Universe =>
     def suchThat(cond: Symbol => Boolean): Symbol
   }
 
-  /** The API of term symbols */
+  /** The API of term symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait TermSymbolApi extends SymbolApi { this: TermSymbol =>
     /** Term symbols have their names of type `TermName`.
      */
@@ -613,7 +635,9 @@ trait Symbols { self: Universe =>
     def isByNameParam: Boolean
   }
 
-  /** The API of type symbols */
+  /** The API of type symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait TypeSymbolApi extends SymbolApi { this: TypeSymbol =>
     /** Type symbols have their names of type `TypeName`.
      */
@@ -678,7 +702,9 @@ trait Symbols { self: Universe =>
     def typeParams: List[Symbol]
   }
 
-  /** The API of method symbols */
+  /** The API of method symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait MethodSymbolApi extends TermSymbolApi { this: MethodSymbol =>
     final override def isMethod = true
     final override def asMethod = this
@@ -712,7 +738,9 @@ trait Symbols { self: Universe =>
     def returnType: Type
   }
 
-  /** The API of module symbols */
+  /** The API of module symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait ModuleSymbolApi extends TermSymbolApi { this: ModuleSymbol =>
     /** The class implicitly associated with the object definition.
      *  One can go back from a module class to the associated module symbol
@@ -725,7 +753,9 @@ trait Symbols { self: Universe =>
     final override def asModule = this
   }
 
-  /** The API of class symbols */
+  /** The API of class symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait ClassSymbolApi extends TypeSymbolApi { this: ClassSymbol =>
     final override def isClass = true
     final override def asClass = this
@@ -791,7 +821,9 @@ trait Symbols { self: Universe =>
     def typeParams: List[Symbol]
   }
 
-  /** The API of free term symbols */
+  /** The API of free term symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait FreeTermSymbolApi extends TermSymbolApi { this: FreeTermSymbol =>
     final override def isFreeTerm = true
     final override def asFreeTerm = this
@@ -803,7 +835,9 @@ trait Symbols { self: Universe =>
     def value: Any
   }
 
-  /** The API of free term symbols */
+  /** The API of free type symbols.
+   *  The main source of information about symbols is the [[scala.reflect.api.Symbols]] page.
+   */
   trait FreeTypeSymbolApi extends TypeSymbolApi { this: FreeTypeSymbol =>
     final override def isFreeType = true
     final override def asFreeType = this
