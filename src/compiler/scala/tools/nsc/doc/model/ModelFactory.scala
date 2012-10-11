@@ -32,8 +32,8 @@ class ModelFactory(val global: Global, val settings: doc.Settings) {
   import rootMirror.{ RootPackage, RootClass, EmptyPackage }
 
   // Defaults for member grouping, that may be overridden by the template
-  val defaultGroup = "default"
-  val defaultGroupName = "Other Members"
+  val defaultGroup = "Ungrouped"
+  val defaultGroupName = "Ungrouped"
   val defaultGroupDesc = None
   val defaultGroupPriority = 1000
 
