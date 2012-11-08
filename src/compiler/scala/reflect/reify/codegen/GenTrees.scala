@@ -130,8 +130,8 @@ trait GenTrees {
       mirrorBuildCall(nme.This, reify(tree.symbol))
     case tree @ This(_) if tree.symbol.isLocalToReifee =>
       mirrorCall(nme.This, reify(tree.qual))
-    case tree @ Ident(_) if tree.symbol == NoSymbol =>
-      // this sometimes happens, e.g. for binds that don't have a body
+    case tree @ Ident(_) if tree.symbol == NoSymbol || tree.symbol.isLocalToReifee =>
+      // tree.symbol == NoSymbol sometimes happens, e.g. for binds that don't have a body
       // or for untyped code generated during previous phases
       // (see a comment in Reifiers about the latter, starting with "why do we resetAllAttrs?")
       mirrorCall(nme.Ident, reify(tree.name))
@@ -142,8 +142,11 @@ trait GenTrees {
       } else {
         mirrorBuildCall(nme.Ident, reify(tree.symbol))
       }
-    case tree @ Ident(_) if tree.symbol.isLocalToReifee =>
-      mirrorCall(nme.Ident, reify(tree.name))
+    case tree @ Select(_, _) if tree.symbol == NoSymbol || tree.symbol.isLocalToReifee =>
+      // tree.symbol == NoSymbol sometimes happens, e.g. for CONSTRUCTOR selects
+      mirrorCall(nme.Select, reify(tree.qualifier), reify(tree.name))
+    case tree @ Select(_, _) if !tree.symbol.isLocalToReifee =>
+      mirrorBuildCall(nme.Select, reify(tree.qualifier), reify(tree.symbol))
     case _ =>
       throw new Error("internal error: %s (%s, %s) is not supported".format(tree, tree.productPrefix, tree.getClass))
   }
