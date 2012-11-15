@@ -523,7 +523,7 @@ trait Trees extends api.Trees { self: SymbolTable =>
     def ValDef(tree: Tree, mods: Modifiers, name: Name, tpt: Tree, rhs: Tree) =
       new ValDef(mods, name.toTermName, tpt, rhs).copyAttrs(tree)
     def DefDef(tree: Tree, mods: Modifiers, name: Name, tparams: List[TypeDef], vparamss: List[List[ValDef]], tpt: Tree, rhs: Tree) =
-      new DefDef(mods, name.toTermName, tparams, vparamss, tpt, rhs).copyAttrs(tree)
+      new DefDef(mods, name, tparams, vparamss, tpt, rhs).copyAttrs(tree)
     def TypeDef(tree: Tree, mods: Modifiers, name: Name, tparams: List[TypeDef], rhs: Tree) =
       new TypeDef(mods, name.toTypeName, tparams, rhs).copyAttrs(tree)
     def LabelDef(tree: Tree, name: Name, params: List[Ident], rhs: Tree) =
@@ -945,7 +945,7 @@ trait Trees extends api.Trees { self: SymbolTable =>
     atPos(sym.pos) {
       assert(sym != NoSymbol)
       DefDef(mods,
-             sym.name.toTermName,
+             sym.name,
              sym.typeParams map TypeDef,
              vparamss,
              TypeTree(sym.tpe.finalResultType) setPos sym.pos.focus,

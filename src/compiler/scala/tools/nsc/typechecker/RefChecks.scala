@@ -1323,6 +1323,7 @@ abstract class RefChecks extends InfoTransform with scala.reflect.internal.trans
         }
       case Import(_, _)                                                                       => Nil
       case DefDef(mods, _, _, _, _, _) if (mods hasFlag MACRO) || (tree.symbol hasFlag MACRO) => Nil
+      case TypeDef(mods, _, _, _)      if (mods hasFlag MACRO) || (tree.symbol hasFlag MACRO) => Nil
       case _                                                                                  => transform(tree) :: Nil
     }
 
