@@ -702,15 +702,19 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               macroLogVerbose(s"typechecking against $phase $pt: $expanded")
               val numErrors    = reporter.ERROR.count
               def hasNewErrors = reporter.ERROR.count > numErrors
-              val result = typer.context.withImplicitsEnabled(typer.typed(tree, EXPRmode, pt))
+              val result = typer.context.withImplicitsEnabled(typer.typed(tree, mode, pt))
               macroTraceVerbose(s"""${if (hasNewErrors) "failed to typecheck" else "successfully typechecked"} against $phase $pt:\n$result\n""")(result)
             }
 
-            var expectedTpe = expandee.tpe
-            if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
-            var typechecked = typecheck("macro def return type", expanded, expectedTpe)
-            typechecked = typecheck("expected type", typechecked, pt)
-            typechecked
+            if (expandee.isTerm) {
+              var expectedTpe = expandee.tpe
+              if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
+              var typechecked = typecheck("macro def return type", expanded, expectedTpe)
+              typechecked = typecheck("expected type", typechecked, pt)
+              typechecked
+            } else {
+              typecheck("expected type", expanded, pt)
+            }
           } finally {
             popMacroContext()
           }
