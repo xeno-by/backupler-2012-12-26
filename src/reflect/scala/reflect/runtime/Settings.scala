@@ -36,6 +36,7 @@ private[reflect] class Settings extends MutableSettings {
   val Xprintpos         = new BooleanSetting(false)
   val Ynotnull          = new BooleanSetting(false)
   val Yshowsymkinds     = new BooleanSetting(false)
+  val Yshowtermtypes    = new BooleanSetting(false)
   val debug             = new BooleanSetting(false)
   val deepCloning       = new BooleanSetting(false)
   val explaintypes      = new BooleanSetting(false)

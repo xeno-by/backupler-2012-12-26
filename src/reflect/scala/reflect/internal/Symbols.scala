@@ -204,9 +204,9 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     /** Create local dummy for template (owner of local blocks) */
     final def newLocalDummy(pos: Position): TermSymbol =
       newTermSymbol(nme.localDummyName(this), pos) setInfo NoType
-    final def newMethod(name: TermName, pos: Position = NoPosition, newFlags: Long = 0L): MethodSymbol =
+    final def newMethod(name: Name, pos: Position = NoPosition, newFlags: Long = 0L): MethodSymbol =
       createMethodSymbol(name, pos, METHOD | newFlags)
-    final def newMethodSymbol(name: TermName, pos: Position = NoPosition, newFlags: Long = 0L): MethodSymbol =
+    final def newMethodSymbol(name: Name, pos: Position = NoPosition, newFlags: Long = 0L): MethodSymbol =
       createMethodSymbol(name, pos, METHOD | newFlags)
     final def newLabel(name: TermName, pos: Position = NoPosition): MethodSymbol =
       newMethod(name, pos, LABEL)
@@ -1076,7 +1076,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     protected def createTermSymbol(name: TermName, pos: Position, newFlags: Long): TermSymbol =
       new TermSymbol(this, pos, name) initFlags newFlags
 
-    protected def createMethodSymbol(name: TermName, pos: Position, newFlags: Long): MethodSymbol =
+    protected def createMethodSymbol(name: Name, pos: Position, newFlags: Long): MethodSymbol =
       new MethodSymbol(this, pos, name) initFlags newFlags
 
     protected def createModuleSymbol(name: TermName, pos: Position, newFlags: Long): ModuleSymbol =
