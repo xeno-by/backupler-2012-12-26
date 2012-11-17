@@ -1489,7 +1489,7 @@ trait Typers extends Modes with Adaptations with Tags {
       val argss = treeInfo.valueArgumentss(tree)
       val tpt1 = typedType(tpt) // TODO typedType or typedTypeConstructor?
       if ((tpt.tpe.typeSymbol ne null) && tpt.tpe.typeSymbol.initialize.isTypeMacro) {
-        macroExpand(Apply(
+        ???
       } else {
         tpt1
       }

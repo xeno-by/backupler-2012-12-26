@@ -2656,9 +2656,7 @@ self =>
             }
           }
           val rhs = expr()
-          val sig = DefDef(mods | Flags.MACRO, name.toTermName, tparams, vparamss, restype, rhs)
-          val macroSigAnnot = New(definitions.MacroSigAnnotation, Block(sig, Literal(Constant(()))))
-          TypeDef((mods | Flags.MACRO) withAnnotations List(macroSigAnnot), name, tparams, typeBounds())
+          DefDef(mods | Flags.MACRO, name.toTermName, tparams, vparamss, restype, rhs)
         }
         in.token match {
           case EQUALS =>
