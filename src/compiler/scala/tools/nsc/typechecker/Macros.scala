@@ -706,7 +706,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               macroTraceVerbose(s"""${if (hasNewErrors) "failed to typecheck" else "successfully typechecked"} against $phase $pt:\n$result\n""")(result)
             }
 
-            if (expandee.symbol.isTerm) {
+            if (expandee.isTerm) {
               var expectedTpe = expandee.tpe
               if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
               var typechecked = typecheck("macro def return type", expanded, expectedTpe)
