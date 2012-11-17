@@ -1553,8 +1553,14 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
           pw.toString
         } else ex.getClass.getName
         // ex.printStackTrace(Console.out) // DEBUG for fsc, note that error stacktraces do not print in fsc
-        globalError(supplementErrorMessage("uncaught exception during compilation: " + shown))
-        throw ex
+        if (!settings.ignoreCrashes.value) {
+          globalError(supplementErrorMessage("uncaught exception during compilation: " + shown))
+          throw ex
+        } else {
+          var msg = if (ex.getMessage != null) ex.getMessage else ex.getClass.toString
+          if (msg.contains(scala.compat.Platform.EOL)) msg = msg.substring(0, msg.indexOf(scala.compat.Platform.EOL))
+          println("crash: " + msg)
+        }
       }
     }
 
