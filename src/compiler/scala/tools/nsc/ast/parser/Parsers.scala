@@ -2656,7 +2656,7 @@ self =>
             }
           }
           val rhs = expr()
-          DefDef(mods | Flags.MACRO, name, tparams, vparamss, restype, rhs)
+          DefDef(mods | Flags.MACRO, name.toTermName, tparams, vparamss, restype, rhs)
         }
         in.token match {
           case EQUALS =>
