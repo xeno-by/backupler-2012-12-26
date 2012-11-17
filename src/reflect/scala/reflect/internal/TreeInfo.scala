@@ -380,6 +380,11 @@ abstract class TreeInfo {
     case _                              => Nil
   }
 
+  def valueArgumentss(tree: Tree): List[List[Tree]] = tree match {
+    case Apply(fn, args) => args +: valueArgumentss(fn)
+    case _ => ListOfNil
+  }
+
   /** Does this argument list end with an argument of the form <expr> : _* ? */
   def isWildcardStarArgList(trees: List[Tree]) =
     trees.nonEmpty && isWildcardStarArg(trees.last)

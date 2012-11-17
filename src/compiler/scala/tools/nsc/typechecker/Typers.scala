@@ -2601,7 +2601,7 @@ trait Typers extends Modes with Adaptations with Tags {
         if (members.head eq EmptyTree) setError(tree)
         else {
           val typedBlock = typedPos(tree.pos, mode, pt) {
-            Block(ClassDef(anonClass, NoMods, ListOfNil, ListOfNil, members, tree.pos.focus), atPos(tree.pos.focus)(New(anonClass.tpe)))
+            Block(ClassDef(anonClass, NoMods, ListOfNil, members, tree.pos.focus), atPos(tree.pos.focus)(New(anonClass.tpe)))
           }
           // Don't leak implementation details into the type, see SI-6575
           if (isPartial && !typedBlock.isErrorTyped)
