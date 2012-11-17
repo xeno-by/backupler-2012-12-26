@@ -1484,14 +1484,25 @@ trait Typers extends Modes with Adaptations with Tags {
           unit.error(tparam.pos, "type parameter of value class may not be specialized")
     }
 
+    def typedParentType(tree: Tree): Tree = {
+      val tpt = treeInfo.methPart(tree)
+      val argss = treeInfo.valueArgumentss(tree)
+      val tpt1 = typedType(tpt) // TODO typedType or typedTypeConstructor?
+      if ((tpt.tpe.typeSymbol ne null) && tpt.tpe.typeSymbol.initialize.isTypeMacro) {
+        macroExpand(Apply(
+      } else {
+        tpt1
+      }
+    }
+
     def parentTypes(templ: Template): List[Tree] =
       if (templ.parents.isEmpty) List(atPos(templ.pos)(TypeTree(AnyRefClass.tpe)))
       else try {
         val clazz = context.owner
         // Normalize supertype and mixins so that supertype is always a class, not a trait.
-        var supertpt = typedTypeConstructor(templ.parents.head)
+        var supertpt = typedParentType(templ.parents.head)
         val firstParent = supertpt.tpe.typeSymbol
-        var mixins = templ.parents.tail map typedType
+        var mixins = templ.parents.tail map typedParentType
         // If first parent is a trait, make it first mixin and add its superclass as first parent
         while ((supertpt.tpe.typeSymbol ne null) && supertpt.tpe.typeSymbol.initialize.isTrait) {
           val supertpt1 = typedType(supertpt)
