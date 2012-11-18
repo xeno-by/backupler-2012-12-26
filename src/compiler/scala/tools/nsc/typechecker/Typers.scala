@@ -1488,7 +1488,8 @@ trait Typers extends Modes with Adaptations with Tags {
       val tpt = treeInfo.methPart(tree)
       val argss = treeInfo.valueArgumentss(tree)
       val tpt1 = typedType(tpt) // TODO typedType or typedTypeConstructor?
-      if ((tpt.tpe.typeSymbol ne null) && tpt.tpe.typeSymbol.initialize.isTypeMacro) {
+      val sym = tpt1.tpe.typeSymbol
+      if ((sym ne null) && sym.initialize.isTypeMacro) {
         ???
       } else {
         tpt1
@@ -1686,6 +1687,7 @@ trait Typers extends Modes with Adaptations with Tags {
         }
 
       if (!parents.isEmpty && parents.forall(!_.isErrorTyped)) {
+        // println("validateParentClass: " + parents.head)
         val superclazz = parents.head.tpe.typeSymbol
         for (p <- parents) validateParentClass(p, superclazz)
       }

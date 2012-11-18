@@ -1464,6 +1464,7 @@ trait Namers extends MethodSynthesis {
              sym.isValueParameter
           || sym.isTypeParameterOrSkolem
           || context.tree.isInstanceOf[ExistentialTypeTree]
+          || sym.isTypeMacro
         )
         // Does the symbol owner require no undefined members?
         def ownerRequiresConcrete = (

@@ -116,11 +116,12 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
         // convert (implicit ... ) to ()(implicit ... ) if its the only parameter section
         if (vparamss1.isEmpty || !vparamss1.head.isEmpty && vparamss1.head.head.mods.isImplicit)
           vparamss1 = List() :: vparamss1;
-        val superRef: Tree = atPos(superPos)(gen.mkSuperSelect)
-        val superCall = (superRef /: ListOfNil) (Apply.apply)
+        // val superRef: Tree = atPos(superPos)(gen.mkSuperSelect)
+        // val superCall = (superRef /: ListOfNil) (Apply.apply)
         List(
           atPos(wrappingPos(superPos, lvdefs)) (
-            DefDef(constrMods, nme.CONSTRUCTOR, List(), vparamss1, TypeTree(), Block(lvdefs ::: List(superCall), Literal(Constant())))))
+            // DefDef(constrMods, nme.CONSTRUCTOR, List(), vparamss1, TypeTree(), Block(lvdefs ::: List(superCall), Literal(Constant())))))
+            DefDef(constrMods, nme.CONSTRUCTOR, List(), vparamss1, TypeTree(), Block(lvdefs, Literal(Constant())))))
       }
     }
     constrs foreach (ensureNonOverlapping(_, parents ::: gvdefs, focus=false))
