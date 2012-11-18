@@ -730,6 +730,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
                             = getAnnotation(DeprecatedOverridingAttr) flatMap (_ stringArg 0)
     def deprecatedOverridingVersion
                             = getAnnotation(DeprecatedOverridingAttr) flatMap (_ stringArg 1)
+    def macroId             = getAnnotation(MacroIdAnnotation) flatMap (_ intArg 0)
 
     // !!! when annotation arguments are not literal strings, but any sort of
     // assembly of strings, there is a fair chance they will turn up here not as
@@ -2073,6 +2074,14 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       if (hasExpandedName) sname = nme.expandedSetterName(sname, base)
       base.info.decl(sname) filter (_.hasAccessorFlag)
     }
+
+    /** For a macro term or type, its signature. Throws an exception otherwise. */
+    final def macroSig: MethodSymbol =
+      if (isTermMacro) this.asMethod
+      else if (isTypeMacro) {
+        val sigs = owner.info.decl(nme.macroTypeSigName(name.toTypeName))
+        sigs.suchThat(_.macroId.get == this.macroId.get).asMethod
+      } else throw new Exception(s"$this is not a macro")
 
     /** If this is a derived value class, return its unbox method
      *  or NoSymbol if it does not exist.

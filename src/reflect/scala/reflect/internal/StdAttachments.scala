@@ -24,4 +24,8 @@ trait StdAttachments {
   case class CompoundTypeTreeOriginalAttachment(parents: List[Tree], stats: List[Tree])
 
   case class MacroExpansionAttachment(original: Tree)
+
+  case class MacroTypeAttachment(sig: Tree)
+
+  case class MacroIdAttachment(id: Int)
 }

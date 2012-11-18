@@ -528,7 +528,7 @@ trait Definitions extends api.StandardDefinitions {
          def MacroContextUniverse                = if (MacroContextClass != NoSymbol) getMemberMethod(MacroContextClass, nme.universe) else NoSymbol
          def MacroContextMirror                  = if (MacroContextClass != NoSymbol) getMemberMethod(MacroContextClass, nme.mirror) else NoSymbol
     lazy val MacroImplAnnotation                 = requiredClass[scala.reflect.macros.internal.macroImpl]
-    lazy val MacroSigAnnotation                  = requiredClass[scala.reflect.macros.internal.macroSig]
+    lazy val MacroIdAnnotation                   = requiredClass[scala.reflect.macros.internal.macroId]
 
     lazy val StringContextClass                  = requiredClass[scala.StringContext]
          def StringContext_f                     = getMemberMethod(StringContextClass, nme.f)

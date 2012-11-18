@@ -2619,6 +2619,9 @@ self =>
         Block(stats, Literal(Constant()))
       }
 
+    private var _macroIdCounter = 0
+    private def nextMacroId() = { _macroIdCounter += 1; _macroIdCounter }
+
     /** {{{
      *  TypeDef ::= type Id [TypeParamClause] `=' Type
      *            | type Id [TypeParamClause] FunSig [nl] [`:' Type] `=' `macro' Expr
@@ -2656,9 +2659,11 @@ self =>
             }
           }
           val rhs = expr()
-          val sig = DefDef(mods | Flags.MACRO, name.toTermName, tparams, vparamss, restype, rhs)
-          val macroSigAnnot = New(definitions.MacroSigAnnotation, Block(sig, Literal(Constant(()))))
-          TypeDef((mods | Flags.MACRO) withAnnotations List(macroSigAnnot), name, tparams, typeBounds())
+          val id = nextMacroId()
+          def macroIdAnn = New(definitions.MacroIdAnnotation, Literal(Constant(id)))
+          val sig = DefDef((mods | Flags.MACRO) withAnnotations List(macroIdAnn), nme.macroTypeSigName(name), tparams, vparamss, restype, rhs)
+          val tdef = TypeDef((mods | Flags.MACRO) withAnnotations List(macroIdAnn), name, tparams, typeBounds())
+          tdef updateAttachment MacroTypeAttachment(sig)
         }
         in.token match {
           case EQUALS =>

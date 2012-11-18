@@ -611,7 +611,13 @@ trait Namers extends MethodSynthesis {
       val sym = assignSymbol(tree)
       newNamer(context.make(tree, sym.moduleClass, sym.info.decls)) enterSyms tree.stats
     }
-    def enterTypeDef(tree: TypeDef) = assignAndEnterFinishedSymbol(tree)
+    def enterTypeDef(tree: TypeDef) = {
+      if (tree.mods hasFlag MACRO) {
+        val sig = tree.attachments.get[MacroTypeAttachment].get.sig
+        enterSyntheticSym(sig)
+      }
+      assignAndEnterFinishedSymbol(tree)
+    }
 
     def enterDefDef(tree: DefDef): Unit = tree match {
       case DefDef(_, nme.CONSTRUCTOR, _, _, _, _) =>
