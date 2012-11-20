@@ -382,7 +382,7 @@ abstract class TreeInfo {
 
   def valueArgumentss(tree: Tree): List[List[Tree]] = tree match {
     case Apply(fn, args) => args +: valueArgumentss(fn)
-    case _ => ListOfNil
+    case _ => Nil
   }
 
   /** Does this argument list end with an argument of the form <expr> : _* ? */

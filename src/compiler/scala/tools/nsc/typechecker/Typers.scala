@@ -1113,7 +1113,8 @@ trait Typers extends Modes with Adaptations with Tags {
             adaptType()
           else if (
               inExprModeButNot(mode, FUNmode) && !tree.isDef &&   // typechecking application
-              tree.symbol != null && tree.symbol.isTermMacro)     // of a macro
+              tree.symbol != null && (tree.symbol.isTermMacro ||  // of a macro
+                                      tree.symbol.isTypeMacro))
             macroExpand(this, tree, mode, pt)
           else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
             adaptConstrPattern()
@@ -1489,15 +1490,20 @@ trait Typers extends Modes with Adaptations with Tags {
       val targs = treeInfo.targPart(tree)
       val argss = treeInfo.valueArgumentss(tree)
       val tpt1 = typedType(tpt) // TODO typedType or typedTypeConstructor?
-      println(showRaw(targs))
       val sym = tpt1.tpe.typeSymbol
       if ((sym ne null) && sym.initialize.isTypeMacro) {
-        val sigs = sym.owner.info.member(nme.typeMacroSigName(sym.name))
-        val expandee = ((Ident(sigs): Tree) /: argss)(Apply.apply)
-        val expanded = macroExpand(this, expandee, TYPEmode, WildcardType)
-        println(expanded)
-        println(showRaw(expanded))
-        ???
+        tpt1 match {
+          case tt @ TypeTree() =>
+            tt.original match {
+              case Select(qual, _) =>
+                var core: Tree = Select(qual, nme.typeMacroSigName(sym.name))
+                if (targs.nonEmpty) core = TypeApply(core, targs)
+                val expandee = (core /: argss)(Apply.apply)
+                val expanded = typed(expandee, EXPRmode, WildcardType)
+                println(expanded)
+                expanded
+           }
+        }
       } else {
         tpt1
       }
