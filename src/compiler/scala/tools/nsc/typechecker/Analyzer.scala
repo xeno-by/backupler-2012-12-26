@@ -39,7 +39,7 @@ trait Analyzer extends AnyRef
       override def keepsTypeParams = false
 
       def apply(unit: CompilationUnit) {
-        println("namerFactory: " + unit)
+        // println("namerFactory: " + unit)
         newNamer(rootContext(unit)).enterSym(unit.body)
       }
     }

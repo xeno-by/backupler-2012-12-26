@@ -4873,15 +4873,15 @@ trait Typers extends Modes with Adaptations with Tags {
           var cx = startingIdentContext
           while (defSym == NoSymbol && cx != NoContext && (cx.scope ne null)) { // cx.scope eq null arises during FixInvalidSyms in Duplicators
             // if (name.toString == "SomeUniqueName") {
-            if (name.toString == "D") {
-              println(cx)
-            }
+            // if (name.toString == "D") {
+            //   println(cx)
+            // }
             pre = cx.enclClass.prefix
             defEntry = cx.scope.lookupEntry(name)
-            if (name.toString == "D") {
-              println(defEntry)
-              println(cx.scope)
-            }
+            // if (name.toString == "D") {
+            //   println(defEntry)
+            //   println(cx.scope)
+            // }
             if ((defEntry ne null) && qualifies(defEntry.sym)) {
               // Right here is where SI-1987, overloading in package objects, can be
               // seen to go wrong. There is an overloaded symbol, but when referring
@@ -4921,11 +4921,11 @@ trait Typers extends Modes with Adaptations with Tags {
             }
           }
 
-          if (name.toString == "SomeUniqueName") {
-            println("here")
-            println(cx)
-            println(defSym)
-          }
+          // if (name.toString == "SomeUniqueName") {
+          //   println("here")
+          //   println(cx)
+          //   println(defSym)
+          // }
 
           val symDepth = if (defEntry eq null) cx.depth
                          else cx.depth - (cx.scope.nestingLevel - defEntry.owner.nestingLevel)
