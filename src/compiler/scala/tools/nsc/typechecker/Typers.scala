@@ -1500,7 +1500,6 @@ trait Typers extends Modes with Adaptations with Tags {
                 if (targs.nonEmpty) core = TypeApply(core, targs)
                 val expandee = (core /: argss)(Apply.apply)
                 val expanded = typed(expandee, EXPRmode, WildcardType)
-                println(expanded)
                 expanded
            }
         }

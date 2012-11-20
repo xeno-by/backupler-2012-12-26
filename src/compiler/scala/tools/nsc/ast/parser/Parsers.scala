@@ -2647,7 +2647,6 @@ self =>
           val offender = tparams find (_.mods hasFlag Flags.COVARIANT | Flags.CONTRAVARIANT)
           offender foreach (tparam => syntaxError(tparam.pos, "type parameters of type macros cannot have variance annotations", true))
           val vparamss = if (onlyNeedToReadBody) Nil else paramClauses(name.toTermName, contextBoundBuf.toList, ofCaseClass = false)
-          var restype = if (onlyNeedToReadBody) EmptyTree else { newLineOptWhenFollowedBy(LBRACE); fromWithinReturnType(typedOpt()) }
           if (!onlyNeedToReadBody) {
             if (in.token == EQUALS) {
               in.nextTokenAllow(nme.MACROkw)
@@ -2664,7 +2663,7 @@ self =>
           // val sig = DefDef((mods | Flags.MACRO) withAnnotations List(macroIdAnn), nme.typeMacroSigName(name), tparams, vparamss, restype, rhs)
           // val tdef = TypeDef((mods | Flags.DEFERRED | Flags.MACRO) withAnnotations List(macroIdAnn), name, tparams, typeBounds())
           // tdef updateAttachment MacroTypeAttachment(sig)
-          DefDef(mods | Flags.MACRO, nme.typeMacroSigName(name), tparams, vparamss, restype, rhs)
+          DefDef(mods | Flags.MACRO, nme.typeMacroSigName(name), tparams, vparamss, scalaDot(tpnme.Nothing), rhs)
         }
         in.token match {
           case EQUALS =>

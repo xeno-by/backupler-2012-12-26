@@ -211,6 +211,10 @@ abstract class Universe extends scala.reflect.api.Universe {
 
     /** All units of work comprising this compilation run. */
     def units: Iterator[CompilationUnit]
+
+    def existsSynthetic(key: String): Boolean
+
+    def compileSynthetic(key: String, body: Tree): Unit
   }
 
   /** The type of compilation units.

@@ -346,7 +346,9 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
         })
 
       val paramss = List(ctxParam) :: mmap(vparamss)(param)
-      val implRetTpe = typeRef(singleType(NoPrefix, ctxParam), getMember(MacroContextClass, tpnme.Expr), List(sigma(retTpe)))
+      val implRetTpe =
+        if (macroDef.isTermMacro) typeRef(singleType(NoPrefix, ctxParam), getMember(MacroContextClass, tpnme.Expr), List(sigma(retTpe)))
+        else typeRef(singleType(NoPrefix, ctxParam), getMember(MacroContextClass, tpnme.Tree), List())
     }
 
     import SigGenerator._
@@ -437,7 +439,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     val macroDefRet =
       if (!macroDdef.tpt.isEmpty) typer.typedType(macroDdef.tpt).tpe
       else computeMacroDefTypeFromMacroImpl(macroDdef, macroImpl)
-    val (rparamss, rret) = macroImplSig(macroDef, macroDdef.tparams, macroDdef.vparamss, macroDefRet)
+    var (rparamss, rret) = macroImplSig(macroDef, macroDdef.tparams, macroDdef.vparamss, macroDefRet)
 
     val implicitParams = aparamss.flatten filter (_.isImplicit)
     if (implicitParams.nonEmpty) MacroImplNonTagImplicitParameters(implicitParams)
@@ -774,15 +776,17 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
           def hasNewErrors = reporter.ERROR.count > numErrors
           val expanded = { pushMacroContext(args.c); runtime(args) }
           if (hasNewErrors) MacroGeneratedTypeError(expandee)
+          def result(expanded: Tree) = {
+            macroLogVerbose("original:")
+            macroLogLite("" + expanded + "\n" + showRaw(expanded))
+            val freeSyms = expanded.freeTerms ++ expanded.freeTypes
+            freeSyms foreach (sym => MacroFreeSymbolError(expandee, sym))
+            Success(atPos(enclosingMacroPosition.focus)(expanded updateAttachment MacroExpansionAttachment(expandee)))
+          }
           expanded match {
-            case expanded: Expr[_] =>
-              macroLogVerbose("original:")
-              macroLogLite("" + expanded.tree + "\n" + showRaw(expanded.tree))
-              val freeSyms = expanded.tree.freeTerms ++ expanded.tree.freeTypes
-              freeSyms foreach (sym => MacroFreeSymbolError(expandee, sym))
-              Success(atPos(enclosingMacroPosition.focus)(expanded.tree updateAttachment MacroExpansionAttachment(expandee)))
-            case _ =>
-              MacroExpansionIsNotExprError(expandee, expanded)
+            case expanded: Expr[_] if expandee.symbol.isTermMacro => result(expanded.tree)
+            case expanded: Tree if expandee.symbol.isTypeMacro => result(expanded)
+            case _ => MacroExpansionIsNotExprError(expandee, expanded)
           }
         } catch {
           case ex: Throwable =>
