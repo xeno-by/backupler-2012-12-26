@@ -4913,6 +4913,10 @@ trait Typers extends Modes with Adaptations with Tags {
             }
           }
 
+          if (name.toString == "SomeUniqueName") {
+            println("here")
+          }
+
           val symDepth = if (defEntry eq null) cx.depth
                          else cx.depth - (cx.scope.nestingLevel - defEntry.owner.nestingLevel)
           var impSym: Symbol = NoSymbol      // the imported symbol

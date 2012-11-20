@@ -1686,12 +1686,12 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
     def existsSynthetic(key: String): Boolean = units exists (_.source.file.name == key)
 
     def compileSynthetic(key: String, body: Tree): Unit = {
-      val filesystemFile = new scala.reflect.io.VirtualFile(key, "")
+      val filesystemFile = new scala.reflect.io.VirtualFile(key, "<synthetic:" + key + ">")
       val sourceFile = new scala.reflect.internal.util.BatchSourceFile(filesystemFile, body.toString)
       // val sourceFile = scala.reflect.internal.util.NoSourceFile
       val unit = new CompilationUnit(sourceFile)
       unit.body = body
-      compileUnits(List(unit), namerPhase)
+      compileLate(unit)
     }
 
     /** Reset package class to state at typer (not sure what this
