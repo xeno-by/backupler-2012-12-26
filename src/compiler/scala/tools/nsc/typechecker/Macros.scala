@@ -704,6 +704,8 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               macroLogVerbose(s"typechecking against $phase $pt: $expanded")
               val numErrors    = reporter.ERROR.count
               def hasNewErrors = reporter.ERROR.count > numErrors
+              // TODO. what can be here in mode?
+              val mode = if (expandee.symbol.isTermMacro) EXPRmode else TYPEmode
               val result = typer.context.withImplicitsEnabled(typer.typed(tree, mode, pt))
               macroTraceVerbose(s"""${if (hasNewErrors) "failed to typecheck" else "successfully typechecked"} against $phase $pt:\n$result\n""")(result)
             }

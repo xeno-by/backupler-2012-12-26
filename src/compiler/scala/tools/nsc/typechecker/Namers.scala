@@ -306,6 +306,7 @@ trait Namers extends MethodSynthesis {
         case Select(qual: RefTree, _) => createPackageSymbol(pos, qual).moduleClass
       }
       val existing = pkgOwner.info.decls.lookup(pid.name)
+      println("existing package: " + existing)
 
       if (existing.isPackage && pkgOwner == existing.owner)
         existing
@@ -351,6 +352,8 @@ trait Namers extends MethodSynthesis {
         }
         else assignAndEnterSymbol(tree) setFlag inConstructorFlag
       }
+      println(clazz)
+      println(clazz.ownerChain)
       clazz match {
         case csym: ClassSymbol if csym.owner.isPackageClass => enterClassSymbol(tree, csym)
         case _                                              => clazz
@@ -634,6 +637,8 @@ trait Namers extends MethodSynthesis {
     }
 
     def enterClassDef(tree: ClassDef) {
+      println("enterClassDef: " + tree.name)
+
       val ClassDef(mods, name, tparams, impl) = tree
       val primaryConstructorArity = treeInfo.firstConstructorArgs(impl.body).size
       tree.symbol = enterClassSymbol(tree)

@@ -634,6 +634,7 @@ trait ContextErrors {
 
       // def stabilize
       def NotAValueError(tree: Tree, sym: Symbol) = {
+        println(scala.tools.nsc.util.stackTraceString(new Exception))
         issueNormalTypeError(tree, sym.kindString + " " + sym.fullName + " is not a value")
         setError(tree)
       }
