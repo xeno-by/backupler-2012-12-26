@@ -484,6 +484,8 @@ trait StdNames {
     def protSetterName(name: Name): TermName = newTermName(PROTECTED_SET_PREFIX + name)
 
     def macroTypeSigName(name: TypeName): TermName = newTermName(name + MACROTYPESIG_SUFFIX)
+    def isMacroTypeSigName(name: Name): Boolean = name.endsWith(MACROTYPESIG_SUFFIX)
+    def stripMacroTypeSigSuffix(name: Name): Name = if (isMacroTypeSigName(name)) name dropRight MACROTYPESIG_SUFFIX.length else name
 
     final val Nil: NameType                 = "Nil"
     final val Predef: NameType              = "Predef"

@@ -611,13 +611,7 @@ trait Namers extends MethodSynthesis {
       val sym = assignSymbol(tree)
       newNamer(context.make(tree, sym.moduleClass, sym.info.decls)) enterSyms tree.stats
     }
-    def enterTypeDef(tree: TypeDef) = {
-      if (tree.mods hasFlag MACRO) {
-        val sig = tree.attachments.get[MacroTypeAttachment].get.sig
-        enterSyntheticSym(sig)
-      }
-      assignAndEnterFinishedSymbol(tree)
-    }
+    def enterTypeDef(tree: TypeDef) = assignAndEnterFinishedSymbol(tree)
 
     def enterDefDef(tree: DefDef): Unit = tree match {
       case DefDef(_, nme.CONSTRUCTOR, _, _, _, _) =>
@@ -628,8 +622,15 @@ trait Namers extends MethodSynthesis {
 
         if (name == nme.copy && sym.isSynthetic)
           enterCopyMethod(tree, tparams)
-        else
+        else {
+          if (nme.isMacroTypeSigName(name)) {
+            val typeName = nme.stripMacroTypeSigSuffix(name).toTypeName
+            val prev = context.scope.lookupEntry(typeName)
+            val alreadySynthesized = (prev ne null) && prev.owner == context.scope && (prev.sym hasFlag MACRO)
+            if (!alreadySynthesized) enterSyntheticSym(TypeDef(mods | DEFERRED, typeName, Nil, TypeTree(TypeBounds.empty)))
+          }
           sym setInfo completerOf(tree, tparams)
+        }
     }
 
     def enterClassDef(tree: ClassDef) {

@@ -2659,11 +2659,12 @@ self =>
             }
           }
           val rhs = expr()
-          val id = nextMacroId()
-          def macroIdAnn = New(definitions.MacroIdAnnotation, Literal(Constant(id)))
-          val sig = DefDef((mods | Flags.MACRO) withAnnotations List(macroIdAnn), nme.macroTypeSigName(name), tparams, vparamss, restype, rhs)
-          val tdef = TypeDef((mods | Flags.DEFERRED | Flags.MACRO) withAnnotations List(macroIdAnn), name, tparams, typeBounds())
-          tdef updateAttachment MacroTypeAttachment(sig)
+          // val id = nextMacroId()
+          // def macroIdAnn = New(definitions.MacroIdAnnotation, Literal(Constant(id)))
+          // val sig = DefDef((mods | Flags.MACRO) withAnnotations List(macroIdAnn), nme.macroTypeSigName(name), tparams, vparamss, restype, rhs)
+          // val tdef = TypeDef((mods | Flags.DEFERRED | Flags.MACRO) withAnnotations List(macroIdAnn), name, tparams, typeBounds())
+          // tdef updateAttachment MacroTypeAttachment(sig)
+          DefDef(mods | Flags.MACRO, nme.macroTypeSigName(name), tparams, vparamss, restype, rhs)
         }
         in.token match {
           case EQUALS =>
