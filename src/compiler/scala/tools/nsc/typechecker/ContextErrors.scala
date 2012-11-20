@@ -562,6 +562,7 @@ trait ContextErrors {
 
       //adapt
       def MissingArgsForMethodTpeError(tree: Tree, meth: Symbol) = {
+        println(scala.tools.nsc.util.stackTraceString(new Exception))
         issueNormalTypeError(tree,
           "missing arguments for " + meth.fullLocationString + (
             if (meth.isConstructor) ""
@@ -990,7 +991,7 @@ trait ContextErrors {
 
       def TypeSigError(tree: Tree, ex: TypeError) = {
         ex match {
-          case CyclicReference(_, _) if tree.symbol.isTermMacro =>
+          case CyclicReference(_, _) if tree.symbol.isTermMacro || tree.symbol.isTypeMacro =>
             // say, we have a macro def `foo` and its macro impl `impl`
             // if impl: 1) omits return type, 2) has anything implicit in its body, 3) sees foo
             //

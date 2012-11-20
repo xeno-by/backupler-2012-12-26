@@ -326,7 +326,7 @@ trait StdNames {
     val SPECIALIZED_INSTANCE: NameType     = "specInstance$"
     val STAR: NameType                     = "*"
     val THIS: NameType                     = "_$this"
-    val MACROTYPESIG_SUFFIX: NameType      = "$macro"
+    val TYPEMACROSIG_SUFFIX: NameType      = "$macro"
 
     @deprecated("Use SPECIALIZED_SUFFIX", "2.10.0")
     def SPECIALIZED_SUFFIX_STRING = SPECIALIZED_SUFFIX.toString
@@ -483,9 +483,9 @@ trait StdNames {
     /** The name of a setter for protected symbols. Used for inherited Java fields. */
     def protSetterName(name: Name): TermName = newTermName(PROTECTED_SET_PREFIX + name)
 
-    def macroTypeSigName(name: TypeName): TermName = newTermName(name + MACROTYPESIG_SUFFIX)
-    def isMacroTypeSigName(name: Name): Boolean = name.endsWith(MACROTYPESIG_SUFFIX)
-    def stripMacroTypeSigSuffix(name: Name): Name = if (isMacroTypeSigName(name)) name dropRight MACROTYPESIG_SUFFIX.length else name
+    def typeMacroSigName(name: Name): TermName = newTermName(name + TYPEMACROSIG_SUFFIX)
+    def isTypeMacroSigName(name: Name): Boolean = name.endsWith(TYPEMACROSIG_SUFFIX)
+    def stripTypeMacroSigSuffix(name: Name): Name = if (isTypeMacroSigName(name)) name dropRight TYPEMACROSIG_SUFFIX.length else name
 
     final val Nil: NameType                 = "Nil"
     final val Predef: NameType              = "Predef"

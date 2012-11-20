@@ -487,7 +487,7 @@ trait TypeDiagnostics {
 
       ex match {
         case CyclicReference(sym, info: TypeCompleter) =>
-          if (context0.owner.isTermMacro) {
+          if (context0.owner.isTermMacro || context0.owner.isTypeMacro) {
             // see comments to TypeSigError for an explanation of this special case
             throw ex
           } else {

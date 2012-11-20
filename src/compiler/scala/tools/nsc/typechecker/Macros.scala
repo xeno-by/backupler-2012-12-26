@@ -371,7 +371,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     // Phase I: sanity checks
     val macroDef = macroDdef.symbol
     macroLogVerbose("typechecking macro def %s at %s".format(macroDef, macroDdef.pos))
-    assert(macroDef.isTermMacro, macroDdef)
+    assert(macroDef.isTermMacro || macroDef.isTypeMacro, macroDdef)
     if (fastTrack contains macroDef) MacroDefIsFastTrack()
     if (!typer.checkFeature(macroDdef.pos, MacrosFeature, immediate = true)) MacroFeatureNotEnabled()
 
@@ -386,7 +386,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
         // doesn't manifest itself as an error in the resulting tree
         val prevNumErrors = reporter.ERROR.count
         var rhs1 = typer.typed1(rhs, EXPRmode, WildcardType)
-        def rhsNeedsMacroExpansion = rhs1.symbol != null && rhs1.symbol.isTermMacro && !rhs1.symbol.isErroneous
+        def rhsNeedsMacroExpansion = rhs1.symbol != null && (rhs1.symbol.isTermMacro || rhs1.symbol.isTypeMacro) && !rhs1.symbol.isErroneous
         while (rhsNeedsMacroExpansion) {
           rhs1 = macroExpand1(typer, rhs1) match {
             case Success(expanded) =>
@@ -706,7 +706,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               macroTraceVerbose(s"""${if (hasNewErrors) "failed to typecheck" else "successfully typechecked"} against $phase $pt:\n$result\n""")(result)
             }
 
-            if (expandee.isTerm) {
+            if (expandee.symbol.isTermMacro) {
               var expectedTpe = expandee.tpe
               if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
               var typechecked = typecheck("macro def return type", expanded, expectedTpe)

@@ -875,7 +875,7 @@ trait Typers extends Modes with Adaptations with Tags {
           case Block(_, tree1) => tree1.symbol
           case _               => tree.symbol
         }
-        if (!meth.isConstructor && !meth.isTermMacro && isFunctionType(pt)) { // (4.2)
+        if (!meth.isConstructor && !meth.isTermMacro && !meth.isTypeMacro && isFunctionType(pt)) { // (4.2)
           debuglog("eta-expanding " + tree + ":" + tree.tpe + " to " + pt)
           checkParamsConvertible(tree, tree.tpe)
           val tree0 = etaExpand(context.unit, tree, this)
@@ -1096,7 +1096,7 @@ trait Typers extends Modes with Adaptations with Tags {
           adaptToImplicitMethod(mt)
 
         case mt: MethodType if (((mode & (EXPRmode | FUNmode | LHSmode)) == EXPRmode) &&
-          (context.undetparams.isEmpty || inPolyMode(mode))) && !(tree.symbol != null && tree.symbol.isTermMacro) =>
+          (context.undetparams.isEmpty || inPolyMode(mode))) && !(tree.symbol != null && tree.symbol.isTermMacro) && !(tree.symbol != null && tree.symbol.isTypeMacro) =>
           instantiateToMethodType(mt)
 
         case _ =>
@@ -1486,10 +1486,17 @@ trait Typers extends Modes with Adaptations with Tags {
 
     def typedParentType(tree: Tree): Tree = {
       val tpt = treeInfo.methPart(tree)
+      val targs = treeInfo.targPart(tree)
       val argss = treeInfo.valueArgumentss(tree)
       val tpt1 = typedType(tpt) // TODO typedType or typedTypeConstructor?
+      println(showRaw(targs))
       val sym = tpt1.tpe.typeSymbol
       if ((sym ne null) && sym.initialize.isTypeMacro) {
+        val sigs = sym.owner.info.member(nme.typeMacroSigName(sym.name))
+        val expandee = ((Ident(sigs): Tree) /: argss)(Apply.apply)
+        val expanded = macroExpand(this, expandee, TYPEmode, WildcardType)
+        println(expanded)
+        println(showRaw(expanded))
         ???
       } else {
         tpt1
@@ -2171,7 +2178,7 @@ trait Typers extends Modes with Adaptations with Tags {
                meth.owner.isAnonOrRefinementClass))
             InvalidConstructorDefError(ddef)
           typed(ddef.rhs)
-        } else if (meth.isTermMacro) {
+        } else if (meth.isTermMacro || meth.isTypeMacro) {
           // typechecking macro bodies is sort of unconventional
           // that's why we employ our custom typing scheme orchestrated outside of the typer
           transformedOr(ddef.rhs, typedMacroBody(this, ddef))
@@ -3090,7 +3097,7 @@ trait Typers extends Modes with Adaptations with Tags {
             val lencmp = compareLengths(args, formals)
 
             def checkNotMacro() = {
-              if (fun.symbol != null && fun.symbol.filter(sym => sym != null && sym.isTermMacro && !sym.isErroneous) != NoSymbol)
+              if (fun.symbol != null && fun.symbol.filter(sym => sym != null && (sym.isTermMacro || sym.isTypeMacro) && !sym.isErroneous) != NoSymbol)
                 duplErrorTree(NamedAndDefaultArgumentsNotSupportedForMacros(tree, fun))
             }
 
@@ -5232,7 +5239,7 @@ trait Typers extends Modes with Adaptations with Tags {
             // A: solely for robustness reasons. this mechanism might change in the future, which might break unprotected code
             val exprTyped = context.withMacrosDisabled(typed1(expr, mode, pt))
             exprTyped match {
-              case macroDef if macroDef.symbol != null && macroDef.symbol.isTermMacro && !macroDef.symbol.isErroneous =>
+              case macroDef if macroDef.symbol != null && (macroDef.symbol.isTermMacro || macroDef.symbol.isTypeMacro) && !macroDef.symbol.isErroneous =>
                 MacroEtaError(exprTyped)
               case _ =>
                 typedEta(checkDead(exprTyped))
@@ -5642,8 +5649,8 @@ trait Typers extends Modes with Adaptations with Tags {
     }
 
     def computeMacroDefType(tree: Tree, pt: Type): Type = {
-      assert(context.owner.isTermMacro, context.owner)
-      assert(tree.symbol.isTermMacro, tree.symbol)
+      assert(context.owner.isTermMacro || context.owner.isTypeMacro, context.owner)
+      assert(tree.symbol.isTermMacro || tree.symbol.isTypeMacro, tree.symbol)
       assert(tree.isInstanceOf[DefDef], tree.getClass)
       val ddef = tree.asInstanceOf[DefDef]
 

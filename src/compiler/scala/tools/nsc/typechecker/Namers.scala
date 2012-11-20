@@ -623,8 +623,8 @@ trait Namers extends MethodSynthesis {
         if (name == nme.copy && sym.isSynthetic)
           enterCopyMethod(tree, tparams)
         else {
-          if (nme.isMacroTypeSigName(name)) {
-            val typeName = nme.stripMacroTypeSigSuffix(name).toTypeName
+          if (nme.isTypeMacroSigName(name)) {
+            val typeName = nme.stripTypeMacroSigSuffix(name).toTypeName
             val prev = context.scope.lookupEntry(typeName)
             val alreadySynthesized = (prev ne null) && prev.owner == context.scope && (prev.sym hasFlag MACRO)
             if (!alreadySynthesized) enterSyntheticSym(TypeDef(mods | DEFERRED, typeName, Nil, TypeTree(TypeBounds.empty)))
@@ -814,7 +814,7 @@ trait Namers extends MethodSynthesis {
     private def assignTypeToTree(tree: ValOrDefDef, defnTyper: Typer, pt: Type): Type = {
       // compute result type from rhs
       val typedBody =
-        if (tree.symbol.isTermMacro) defnTyper.computeMacroDefType(tree, pt)
+        if (tree.symbol.isTermMacro || tree.symbol.isTypeMacro) defnTyper.computeMacroDefType(tree, pt)
         else defnTyper.computeType(tree.rhs, pt)
 
       val typedDefn = widenIfNecessary(tree.symbol, typedBody, pt)
@@ -1040,7 +1040,7 @@ trait Namers extends MethodSynthesis {
       // because @macroImpl annotation only gets assigned during typechecking
       // otherwise macro defs wouldn't be able to robustly coexist with their clients
       // because a client could be typechecked before a macro def that it uses
-      if (ddef.symbol.isTermMacro) {
+      if (ddef.symbol.isTermMacro || ddef.symbol.isTypeMacro) {
         val pt = resultPt.substSym(tparamSyms, tparams map (_.symbol))
         typer.computeMacroDefType(ddef, pt)
       }

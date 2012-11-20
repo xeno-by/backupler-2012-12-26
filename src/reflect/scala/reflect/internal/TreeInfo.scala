@@ -484,6 +484,13 @@ abstract class TreeInfo {
     case _                      => tree
   }
 
+  def targPart(tree: Tree): List[Tree] = tree match {
+    case Apply(fn, _)             => targPart(fn)
+    case TypeApply(_, args)       => args
+    case AppliedTypeTree(_, args) => args
+    case _                        => Nil
+  }
+
   /** The depth of the nested applies: e.g. Apply(Apply(Apply(_, _), _), _)
    *  has depth 3.  Continues through type applications (without counting them.)
    */

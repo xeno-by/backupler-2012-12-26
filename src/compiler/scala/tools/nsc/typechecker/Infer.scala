@@ -339,7 +339,7 @@ trait Infer extends Checkable {
           setError(tree)
         }
         else {
-          if (context.owner.isTermMacro && (sym1 hasFlag LOCKED)) {
+          if ((context.owner.isTermMacro || context.owner.isTypeMacro) && (sym1 hasFlag LOCKED)) {
             // we must not let CyclicReference to be thrown from sym1.info
             // because that would mark sym1 erroneous, which it is not
             // but if it's a true CyclicReference then macro def will report it
