@@ -2787,7 +2787,7 @@ self =>
         parents += (parent /: argss)(Apply.apply)
       }
       readMore()
-      while (in.token == WITH) readMore()
+      while (in.token == WITH) { in.nextToken(); readMore() }
       parents.toList
     }
 

@@ -1690,7 +1690,13 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
       val sourceFile = new scala.reflect.internal.util.BatchSourceFile(filesystemFile, body.toString)
       // val sourceFile = scala.reflect.internal.util.NoSourceFile
       val unit = new CompilationUnit(sourceFile)
-      unit.body = body
+      def wrap(body: Tree): Tree = body match {
+        case PackageDef(_, _) => body
+        case ClassDef(_, _, _, _) => wrap(Block(List(body), Literal(Constant(()))))
+        case ModuleDef(_, _, _) => wrap(Block(List(body), Literal(Constant(()))))
+        case Block(cdefs, _) => PackageDef(Ident(nme.EMPTY_PACKAGE_NAME), cdefs)
+      }
+      unit.body = wrap(body)
       compileLate(unit)
     }
 

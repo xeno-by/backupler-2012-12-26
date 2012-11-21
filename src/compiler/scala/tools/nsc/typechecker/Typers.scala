@@ -5626,7 +5626,11 @@ trait Typers extends Modes with Adaptations with Tags {
     def typedHigherKindedType(tree: Tree): Tree = typedHigherKindedType(tree, NOmode)
 
     /** Types a type constructor tree used in a new or supertype */
-    def typedTypeConstructor(tree: Tree, mode: Int): Tree = {
+    def typedTypeConstructor(tree0: Tree, mode: Int): Tree = {
+      val tree = tree0 match {
+        case Apply(tree, _) => tree
+        case tree => tree
+      }
       val result = typed(tree, forTypeMode(mode) | FUNmode, WildcardType)
 
       val restpe = result.tpe.normalize // normalize to get rid of type aliases for the following check (#1241)
