@@ -205,19 +205,19 @@ abstract class TreeBuilder {
    */
   def makeAnonymousNew(stats: List[Tree]): Tree = {
     val stats1 = if (stats.isEmpty) List(Literal(Constant(()))) else stats
-    makeNew(Nil, emptyValDef, stats1, ListOfNil, NoPosition, NoPosition)
+    makeNew(Nil, emptyValDef, stats1, NoPosition, NoPosition)
   }
 
   /** Create positioned tree representing an object creation <new parents { stats }
    *  @param npos  the position of the new
    *  @param cpos  the position of the anonymous class starting with parents
    */
-  def makeNew(parents: List[Tree], self: ValDef, stats: List[Tree], argss: List[List[Tree]],
+  def makeNew(parents: List[Tree], self: ValDef, stats: List[Tree],
               npos: Position, cpos: Position): Tree =
     if (parents.isEmpty)
-      makeNew(List(scalaAnyRefConstr), self, stats, argss, npos, cpos)
+      makeNew(List(scalaAnyRefConstr), self, stats, npos, cpos)
     else if (parents.tail.isEmpty && stats.isEmpty)
-      atPos(npos union cpos) { New(parents.head, argss) }
+      atPos(npos union cpos) { New(parents.head, treeInfo.valueArgumentss(parents.head)) }
     else {
       val x = tpnme.ANON_CLASS_NAME
       atPos(npos union cpos) {
@@ -226,7 +226,7 @@ abstract class TreeBuilder {
             atPos(cpos) {
               ClassDef(
                 Modifiers(FINAL), x, Nil,
-                Template(parents, self, NoMods, ListOfNil, argss, stats, cpos.focus))
+                Template(parents, self, NoMods, ListOfNil, stats, cpos.focus))
             }),
           atPos(npos) {
             New(
