@@ -2621,7 +2621,7 @@ self =>
 
     /** {{{
      *  TypeDef ::= type Id [TypeParamClause] `=' Type
-     *            | FunSig `=' Expr
+     *            | type Id [TypeParamClause] FunSig [nl] `=' `macro' Expr
      *  TypeDcl ::= type Id [TypeParamClause] TypeBounds
      *  }}}
      */
@@ -2632,16 +2632,40 @@ self =>
         val nameOffset = in.offset
         val name = identForType()
         // @M! a type alias as well as an abstract type may declare type parameters
-        val tparams = typeParamClauseOpt(name, null)
+        val contextBoundBuf = new ListBuffer[Tree]
+        val tparams = typeParamClauseOpt(name, contextBoundBuf)
+        val afterTparamsOffset = in.offset
+        def typeDefOrDcl(isDef: Boolean) = {
+          if (contextBoundBuf.nonEmpty) syntaxError(contextBoundBuf(0).pos, "only type macros, not regular types, can have context bounds", true)
+          if (isDef) TypeDef(mods, name, tparams, typ())
+          else TypeDef(mods | Flags.DEFERRED, name, tparams, typeBounds())
+        }
+        def typeMacro(onlyNeedToReadBody: Boolean) = {
+          val offender = tparams find (_.mods hasFlag Flags.COVARIANT | Flags.CONTRAVARIANT)
+          offender foreach (tparam => syntaxError(tparam.pos, "type parameters of type macros cannot have variance annotations", true))
+          val vparamss = if (onlyNeedToReadBody) Nil else paramClauses(name.toTermName, contextBoundBuf.toList, ofCaseClass = false)
+          if (!onlyNeedToReadBody) {
+            if (in.token == EQUALS) {
+              in.nextTokenAllow(nme.MACROkw)
+              if (in.token == IDENTIFIER && in.name == nme.MACROkw) in.nextToken()
+              else syntaxError(afterTparamsOffset, "`=', `>:', or `<:' expected", true)
+            } else {
+              if (vparamss.isEmpty) syntaxErrorOrIncomplete("`=', `>:', or `<:' expected", true)
+              else syntaxErrorOrIncomplete("`=' expected", true)
+            }
+          }
+          val rhs = expr()
+          DefDef(mods | Flags.MACRO, nme.typeMacroSigName(name), tparams, vparamss, scalaDot(tpnme.Nothing), rhs)
+        }
         in.token match {
           case EQUALS =>
             in.nextToken()
-            TypeDef(mods, name, tparams, typ())
+            if (in.token == IDENTIFIER && in.name == nme.MACROkw) { in.nextToken(); typeMacro(onlyNeedToReadBody = true) }
+            else typeDefOrDcl(isDef = true)
           case SUPERTYPE | SUBTYPE | SEMI | NEWLINE | NEWLINES | COMMA | RBRACE =>
-            TypeDef(mods | Flags.DEFERRED, name, tparams, typeBounds())
+            typeDefOrDcl(isDef = false)
           case _ =>
-            syntaxErrorOrIncomplete("`=', `>:', or `<:' expected", true)
-            EmptyTree
+            typeMacro(onlyNeedToReadBody = false)
         }
       }
     }
