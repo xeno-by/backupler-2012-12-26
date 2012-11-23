@@ -875,7 +875,7 @@ trait Typers extends Modes with Adaptations with Tags {
           case Block(_, tree1) => tree1.symbol
           case _               => tree.symbol
         }
-        if (!meth.isConstructor && !meth.isTermMacro && isFunctionType(pt)) { // (4.2)
+        if (!meth.isConstructor && !meth.isTermMacro && !meth.isTypeMacro && isFunctionType(pt)) { // (4.2)
           debuglog("eta-expanding " + tree + ":" + tree.tpe + " to " + pt)
           checkParamsConvertible(tree, tree.tpe)
           val tree0 = etaExpand(context.unit, tree, this)
@@ -1096,7 +1096,8 @@ trait Typers extends Modes with Adaptations with Tags {
           adaptToImplicitMethod(mt)
 
         case mt: MethodType if (((mode & (EXPRmode | FUNmode | LHSmode)) == EXPRmode) &&
-          (context.undetparams.isEmpty || inPolyMode(mode))) && !(tree.symbol != null && tree.symbol.isTermMacro) =>
+          (context.undetparams.isEmpty || inPolyMode(mode))) &&
+          !(tree.symbol != null && (tree.symbol.isTermMacro || tree.symbol.isTypeMacro)) =>
           instantiateToMethodType(mt)
 
         case _ =>
@@ -1112,8 +1113,8 @@ trait Typers extends Modes with Adaptations with Tags {
           if (tree.isType)
             adaptType()
           else if (
-              inExprModeButNot(mode, FUNmode) && !tree.isDef &&   // typechecking application
-              tree.symbol != null && tree.symbol.isTermMacro)     // of a macro
+              inExprModeButNot(mode, FUNmode) && !tree.isDef &&
+              tree.symbol != null && (tree.symbol.isTermMacro || tree.symbol.isTypeMacro))
             macroExpand(this, tree, mode, pt)
           else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
             adaptConstrPattern()
@@ -2181,7 +2182,7 @@ trait Typers extends Modes with Adaptations with Tags {
                meth.owner.isAnonOrRefinementClass))
             InvalidConstructorDefError(ddef)
           typed(ddef.rhs)
-        } else if (meth.isTermMacro) {
+        } else if (meth.isTermMacro || meth.isTypeMacro) {
           // typechecking macro bodies is sort of unconventional
           // that's why we employ our custom typing scheme orchestrated outside of the typer
           transformedOr(ddef.rhs, typedMacroBody(this, ddef))
@@ -3100,7 +3101,7 @@ trait Typers extends Modes with Adaptations with Tags {
             val lencmp = compareLengths(args, formals)
 
             def checkNotMacro() = {
-              if (fun.symbol != null && fun.symbol.filter(sym => sym != null && sym.isTermMacro && !sym.isErroneous) != NoSymbol)
+              if (fun.symbol != null && fun.symbol.filter(sym => sym != null && (sym.isTermMacro || sym.isTypeMacro) && !sym.isErroneous) != NoSymbol)
                 duplErrorTree(NamedAndDefaultArgumentsNotSupportedForMacros(tree, fun))
             }
 
@@ -5656,8 +5657,8 @@ trait Typers extends Modes with Adaptations with Tags {
     }
 
     def computeMacroDefType(tree: Tree, pt: Type): Type = {
-      assert(context.owner.isTermMacro, context.owner)
-      assert(tree.symbol.isTermMacro, tree.symbol)
+      assert(context.owner.isTermMacro || context.owner.isTypeMacro, context.owner)
+      assert(tree.symbol.isTermMacro || tree.symbol.isTypeMacro, tree.symbol)
       assert(tree.isInstanceOf[DefDef], tree.getClass)
       val ddef = tree.asInstanceOf[DefDef]
 

@@ -380,6 +380,11 @@ abstract class TreeInfo {
     case _                              => Nil
   }
 
+  def valueArgumentss(tree: Tree): List[List[Tree]] = tree match {
+    case Apply(fn, args) => args +: valueArgumentss(fn)
+    case _ => Nil
+  }
+
   /** Does this argument list end with an argument of the form <expr> : _* ? */
   def isWildcardStarArgList(trees: List[Tree]) =
     trees.nonEmpty && isWildcardStarArg(trees.last)
@@ -477,6 +482,13 @@ abstract class TreeInfo {
     case TypeApply(fn, _)       => methPart(fn)
     case AppliedTypeTree(fn, _) => methPart(fn)
     case _                      => tree
+  }
+
+  def targPart(tree: Tree): List[Tree] = tree match {
+    case Apply(fn, _)             => targPart(fn)
+    case TypeApply(_, args)       => args
+    case AppliedTypeTree(_, args) => args
+    case _                        => Nil
   }
 
   /** The depth of the nested applies: e.g. Apply(Apply(Apply(_, _), _), _)

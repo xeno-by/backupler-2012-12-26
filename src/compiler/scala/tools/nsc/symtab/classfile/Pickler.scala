@@ -68,7 +68,7 @@ abstract class Pickler extends SubComponent {
           return
         }
 
-        if (!t.isDef && t.hasSymbol && t.symbol.isTermMacro) {
+        if (!t.isDef && t.hasSymbol && (t.symbol.isTermMacro || t.symbol.isTypeMacro)) {
           unit.error(t.pos, t.symbol.typeParams.length match {
             case 0 => "macro has not been expanded"
             case 1 => "type parameter not specified"
