@@ -347,7 +347,9 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
         })
 
       val paramss = List(ctxParam) :: mmap(vparamss)(param)
-      val implRetTpe = typeRef(singleType(NoPrefix, ctxParam), getMember(MacroContextClass, tpnme.Expr), List(sigma(retTpe)))
+      val implRetTpe =
+        if (macroDef.isTermMacro) typeRef(singleType(NoPrefix, ctxParam), getMember(MacroContextClass, tpnme.Expr), List(sigma(retTpe)))
+        else typeRef(singleType(NoPrefix, ctxParam), getMember(MacroContextClass, tpnme.Tree), List())
     }
 
     import SigGenerator._
@@ -372,7 +374,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     // Phase I: sanity checks
     val macroDef = macroDdef.symbol
     macroLogVerbose("typechecking macro def %s at %s".format(macroDef, macroDdef.pos))
-    assert(macroDef.isTermMacro, macroDdef)
+    assert(macroDef.isTermMacro || macroDef.isTypeMacro, macroDdef)
     if (fastTrack contains macroDef) MacroDefIsFastTrack()
     if (!typer.checkFeature(macroDdef.pos, MacrosFeature, immediate = true)) MacroFeatureNotEnabled()
 
@@ -703,15 +705,22 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               macroLogVerbose(s"typechecking against $phase $pt: $expanded")
               val numErrors    = reporter.ERROR.count
               def hasNewErrors = reporter.ERROR.count > numErrors
-              val result = typer.context.withImplicitsEnabled(typer.typed(tree, EXPRmode, pt))
+              // TODO: I'm not sure how to marry this mode with `mode` that is passed to `macroExpand`
+              val mode = if (expandee.symbol.isTermMacro) EXPRmode else TYPEmode
+              val result = typer.context.withImplicitsEnabled(typer.typed(tree, mode, pt))
               macroTraceVerbose(s"""${if (hasNewErrors) "failed to typecheck" else "successfully typechecked"} against $phase $pt:\n$result\n""")(result)
             }
 
-            var expectedTpe = expandee.tpe
-            if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
-            var typechecked = typecheck("macro def return type", expanded, expectedTpe)
-            typechecked = typecheck("expected type", typechecked, pt)
-            typechecked
+            if (expandee.symbol.isTermMacro) {
+              var expectedTpe = expandee.tpe
+              if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
+              var typechecked = typecheck("macro def return type", expanded, expectedTpe)
+              typechecked = typecheck("expected type", typechecked, pt)
+              typechecked
+            } else {
+              // TODO: also typecheck against the overriden type def from the base type if any
+              typecheck("expected type", expanded, pt)
+            }
           } finally {
             popMacroContext()
           }
@@ -771,15 +780,17 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
           def hasNewErrors = reporter.ERROR.count > numErrors
           val expanded = { pushMacroContext(args.c); runtime(args) }
           if (hasNewErrors) MacroGeneratedTypeError(expandee)
+          def validateResultingTree(expanded: Tree) = {
+            macroLogVerbose("original:")
+            macroLogLite("" + expanded + "\n" + showRaw(expanded))
+            val freeSyms = expanded.freeTerms ++ expanded.freeTypes
+            freeSyms foreach (sym => MacroFreeSymbolError(expandee, sym))
+            Success(atPos(enclosingMacroPosition.focus)(expanded updateAttachment MacroExpansionAttachment(expandee)))
+          }
           expanded match {
-            case expanded: Expr[_] =>
-              macroLogVerbose("original:")
-              macroLogLite("" + expanded.tree + "\n" + showRaw(expanded.tree))
-              val freeSyms = expanded.tree.freeTerms ++ expanded.tree.freeTypes
-              freeSyms foreach (sym => MacroFreeSymbolError(expandee, sym))
-              Success(atPos(enclosingMacroPosition.focus)(expanded.tree updateAttachment MacroExpansionAttachment(expandee)))
-            case _ =>
-              MacroExpansionIsNotExprError(expandee, expanded)
+            case expanded: Expr[_] if expandee.symbol.isTermMacro => validateResultingTree(expanded.tree)
+            case expanded: Tree if expandee.symbol.isTypeMacro => validateResultingTree(expanded)
+            case _ => MacroExpansionIsNotExprOrTreeError(expandee, expanded)
           }
         } catch {
           case ex: Throwable =>

@@ -755,13 +755,18 @@ trait ContextErrors {
         macroExpansionError(expandee, template(sym.name.nameKind).format(sym.name + " " + sym.origin, forgotten))
       }
 
-      def MacroExpansionIsNotExprError(expandee: Tree, expanded: Any) =
+      def MacroExpansionIsNotExprOrTreeError(expandee: Tree, expanded: Any) = {
+        val expected = if (expandee.symbol.isTermMacro) "expr" else "tree"
+        def isPathMismatch =
+          if (expandee.symbol.isTermMacro) expanded.isInstanceOf[scala.reflect.api.Exprs#Expr[_]]
+          else expanded.isInstanceOf[scala.reflect.internal.Trees#Tree]
         macroExpansionError(expandee,
-          "macro must return a compiler-specific expr; returned value is " + (
+          s"macro must return a compiler-specific $expected; returned value is " + (
             if (expanded == null) "null"
-            else if (expanded.isInstanceOf[Expr[_]]) " Expr, but it doesn't belong to this compiler's universe"
+            else if (isPathMismatch) s" $expected, but it doesn't belong to this compiler"
             else " of " + expanded.getClass
         ))
+      }
 
       def MacroImplementationNotFoundError(expandee: Tree) =
         macroExpansionError(expandee,
