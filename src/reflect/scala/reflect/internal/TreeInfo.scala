@@ -271,6 +271,9 @@ abstract class TreeInfo {
   def preSuperFields(stats: List[Tree]): List[ValDef] =
     stats collect { case vd: ValDef if isEarlyValDef(vd) => vd }
 
+  def hasUntypedPreSuperFields(stats: List[Tree]): Boolean =
+    preSuperFields(stats) exists (_.tpt.isEmpty)
+
   def isEarlyDef(tree: Tree) = tree match {
     case TypeDef(mods, _, _, _) => mods hasFlag PRESUPER
     case ValDef(mods, _, _, _) => mods hasFlag PRESUPER
@@ -355,22 +358,6 @@ abstract class TreeInfo {
     case _                                  => false
   }
 
-  /** If this tree represents a type application (after unwrapping
-   *  any applies) the first type argument.  Otherwise, EmptyTree.
-   */
-  def firstTypeArg(tree: Tree): Tree = tree match {
-    case Apply(fn, _)            => firstTypeArg(fn)
-    case TypeApply(_, targ :: _) => targ
-    case _                       => EmptyTree
-  }
-
-  /** If this tree represents a type application the type arguments. Otherwise Nil.
-   */
-  def typeArguments(tree: Tree): List[Tree] = tree match {
-    case TypeApply(_, targs) => targs
-    case _                   => Nil
-  }
-
   /** If this tree has type parameters, those.  Otherwise Nil.
    */
   def typeParameters(tree: Tree): List[TypeDef] = tree match {
@@ -379,7 +366,6 @@ abstract class TreeInfo {
     case TypeDef(_, _, tparams, _)      => tparams
     case _                              => Nil
   }
-
   /** Does this argument list end with an argument of the form <expr> : _* ? */
   def isWildcardStarArgList(trees: List[Tree]) =
     trees.nonEmpty && isWildcardStarArg(trees.last)
@@ -469,14 +455,66 @@ abstract class TreeInfo {
   def isSynthCaseSymbol(sym: Symbol) = sym hasAllFlags SYNTH_CASE_FLAGS
   def hasSynthCaseSymbol(t: Tree)    = t.symbol != null && isSynthCaseSymbol(t.symbol)
 
+  def isTraitRef(tree: Tree): Boolean = {
+    val sym = if (tree.tpe != null) tree.tpe.typeSymbol else null
+    ((sym ne null) && sym.initialize.isTrait)
+  }
 
-  /** The method part of an application node
+  /** Applications in Scala can have one of the following shapes:
+   *
+   *    1) naked core: Ident(_) or Select(_, _) or basically anything else
+   *    2) naked core with targs: TypeApply(core, targs) or AppliedTypeTree(core, targs)
+   *    3) apply or several applies wrapping a core: Apply(core, _), or Apply(Apply(core, _), _), etc
+   *
+   *  This extractor disassembles applications into the core, type arguments and list of lists of value arguments.
+   *  If the tree is not an application, it will be returned as-is with targs and argss set to Nil.
+   */
+  object Application {
+    def unapply(tree: Tree): Option[(Tree, List[Tree], List[List[Tree]])] = {
+      val unwrapped = methPart(tree)
+      if (tree == unwrapped) Some((tree, Nil, Nil))
+      else {
+        val targs = typeArguments(tree)
+        val argss = argumentss(tree)
+        Some((unwrapped, targs, argss))
+      }
+    }
+  }
+
+  /** The core part of an application.
+   *  See the `Application` extractor for more info.
    */
   def methPart(tree: Tree): Tree = tree match {
     case Apply(fn, _)           => methPart(fn)
     case TypeApply(fn, _)       => methPart(fn)
     case AppliedTypeTree(fn, _) => methPart(fn)
     case _                      => tree
+  }
+
+  /** The application stripped of the possibly nested `Apply` nodes.
+   *  The original trees otherwise.
+   */
+  def unwrapApply(tree: Tree): Tree = tree match {
+    case Apply(fn, _)           => unwrapApply(fn)
+    case _                      => tree
+  }
+
+  /** The type arguments part of an application.
+   *  See the `Application` extractor for more info.
+   */
+  def typeArguments(tree: Tree): List[Tree] = tree match {
+    case Apply(fn, _)             => typeArguments(fn)
+    case TypeApply(_, args)       => args
+    case AppliedTypeTree(_, args) => args
+    case _                        => Nil
+  }
+
+  /** The value arguments part of an application.
+   *  See the `Application` extractor for more info.
+   */
+  def argumentss(tree: Tree): List[List[Tree]] = tree match {
+    case Apply(fn, args) => argumentss(fn) :+ args
+    case _ => Nil
   }
 
   /** The depth of the nested applies: e.g. Apply(Apply(Apply(_, _), _), _)
@@ -487,13 +525,6 @@ abstract class TreeInfo {
     case TypeApply(fn, _)       => applyDepth(fn)
     case AppliedTypeTree(fn, _) => applyDepth(fn)
     case _                      => 0
-  }
-  def firstArgument(tree: Tree): Tree = tree match {
-    case Apply(fn, args) =>
-      val f = firstArgument(fn)
-      if (f == EmptyTree && !args.isEmpty) args.head else f
-    case _ =>
-      EmptyTree
   }
 
   /** Does list of trees start with a definition of
