@@ -184,8 +184,9 @@ trait ContextErrors {
       }
 
       def ParentTypesError(templ: Template, ex: TypeError) = {
-         templ.tpe = null
-         issueNormalTypeError(templ, ex.getMessage())
+        templ.tpe = null
+        issueNormalTypeError(templ, ex.getMessage())
+        setError(templ)
       }
 
       // additional parentTypes errors
