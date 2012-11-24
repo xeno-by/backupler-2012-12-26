@@ -1544,7 +1544,12 @@ trait Typers extends Modes with Adaptations with Tags {
       if (probe.isTrait || inMixinPosition) {
         // TODO: fix `templateParents` so that it doesn't mix up Nils with ListOfNils
         // so far `trait T; class C extends T()` is not an error precisely because of that
-        if (probe.isTrait && !vargssAreTrivial) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
+        if (!vargssAreTrivial) {
+          if (probe.isTrait) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
+          else () // a class in a mixin position - this warrants an error in `validateParentClasses`
+                  // therefore here we do nothing, e.g. don't check that the # of ctor arguments
+                  // matches the # of ctor parameters or stuff like that
+        }
         typedType(decodedtpt)
       } else {
         var supertpt = typedTypeConstructor(decodedtpt)
@@ -1939,7 +1944,7 @@ trait Typers extends Modes with Adaptations with Tags {
       // the following is necessary for templates generated later
       assert(clazz.info.decls != EmptyScope, clazz)
       enterSyms(context.outer.make(templ, clazz, clazz.info.decls), templ.body)
-      validateParentClasses(parents1, selfType)
+      if (!reporter.hasErrors) validateParentClasses(parents1, selfType)
       if (clazz.isCase)
         validateNoCaseAncestor(clazz)
 
