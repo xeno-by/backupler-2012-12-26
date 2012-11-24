@@ -2784,14 +2784,14 @@ self =>
           }
           in.nextToken()
           val parents = templateParents()
-          val (self1, body1) = templateBodyOpt()
+          val (self1, body1) = templateBodyOpt(parenMeansSyntaxError = false)
           (parents, self1, earlyDefs ::: body1)
         } else {
           (List(), self, body)
         }
       } else {
         val parents = templateParents()
-        val (self, body) = templateBodyOpt()
+        val (self, body) = templateBodyOpt(parenMeansSyntaxError = false)
         (parents, self, body)
       }
     }
@@ -2813,7 +2813,7 @@ self =>
         }
         else {
           newLineOptWhenFollowedBy(LBRACE)
-          val (self, body) = templateBodyOpt()
+          val (self, body) = templateBodyOpt(parenMeansSyntaxError = mods.isTrait || name.isTermName)
           (List(), self, body)
         }
       )
@@ -2851,10 +2851,17 @@ self =>
       case (self, Nil)  => (self, EmptyTree.asList)
       case result       => result
     }
-    def templateBodyOpt(): (ValDef, List[Tree]) = {
+    def templateBodyOpt(parenMeansSyntaxError: Boolean): (ValDef, List[Tree]) = {
       newLineOptWhenFollowedBy(LBRACE)
-      if (in.token == LBRACE) templateBody(isPre = false)
-      else (emptyValDef, List())
+      if (in.token == LBRACE) {
+        templateBody(isPre = false)
+      } else {
+        if (in.token == LPAREN) {
+          if (parenMeansSyntaxError) syntaxError(s"traits or objects may not have parameters", true)
+          else assert(false, "unexpected opening parenthesis")
+        }
+        (emptyValDef, List())
+      }
     }
 
     /** {{{
