@@ -2752,7 +2752,7 @@ self =>
           if (in.token == LPAREN) multipleArgumentExprs()
           else ListOfNil
         )
-        parents += (parent /: argss)(Apply.apply)
+        parents += atPos(parent.pos)((parent /: argss)(Apply.apply))
       }
       readMore()
       while (in.token == WITH) { in.nextToken(); readMore() }
