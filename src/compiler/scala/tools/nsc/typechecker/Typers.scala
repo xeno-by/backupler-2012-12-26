@@ -1949,27 +1949,27 @@ trait Typers extends Modes with Adaptations with Tags {
       if (!phase.erasedTypes && !clazz.info.resultType.isError) // @S: prevent crash for duplicated type members
         checkFinitary(clazz.info.resultType.asInstanceOf[ClassInfoType])
 
-      val body =
-        if (isPastTyper || reporter.hasErrors) templ.body
-        else {
-          val body1 = templ.body flatMap rewrappingWrapperTrees(namer.addDerivedTrees(Typer.this, _))
-          parents1.head match {
-            case CarriesSuperCallArgs(vargss) =>
-              if (clazz.isTrait) {
-                ConstrArgsInParentOfTraitError(parents1.head, clazz)
-                body1
-              } else {
-                val primaryCtor = treeInfo.firstConstructor(templ.body)
-                val primaryCtor1 = deriveDefDef(primaryCtor) {
-                  case block @ Block(earlyVals :+ Apply(superRef, Nil), unit) =>
-                    val superCall = (superRef /: vargss)(Apply.apply)
-                    treeCopy.Block(block, earlyVals :+ superCall, unit)
-                }
-                body1 map { case `primaryCtor` => primaryCtor1; case stat => stat }
+      val body = {
+        val body =
+          if (isPastTyper || reporter.hasErrors) templ.body
+          else templ.body flatMap rewrappingWrapperTrees(namer.addDerivedTrees(Typer.this, _))
+        parents1.head match {
+          case CarriesSuperCallArgs(vargss) =>
+            if (clazz.isTrait) {
+              ConstrArgsInParentOfTraitError(parents1.head, clazz)
+              body
+            } else {
+              val primaryCtor = treeInfo.firstConstructor(templ.body)
+              val primaryCtor1 = deriveDefDef(primaryCtor) {
+                case block @ Block(earlyVals :+ Apply(superRef, Nil), unit) =>
+                  val superCall = (superRef /: vargss)(Apply.apply)
+                  treeCopy.Block(block, earlyVals :+ superCall, unit)
               }
-            case _ => body1
-          }
+              body map { case `primaryCtor` => primaryCtor1; case stat => stat }
+            }
+          case _ => body
         }
+      }
 
       val body1 = typedStats(body, templ.symbol)
 
