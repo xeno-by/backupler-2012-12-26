@@ -1554,9 +1554,9 @@ trait Typers extends Modes with Adaptations with Tags {
             val supertpe = PolyType(supertparams, appliedType(supertpt.tpe, supertparams map (_.tpeHK)))
             val superRef1: Tree = treeCopy.Select(
               superRef,
-              atPos(supertpt.pos.focus)(New(TypeTree(supertpe)) setType supertpe),
+              New(TypeTree(supertpe)) setType supertpe,
               nme.CONSTRUCTOR)
-            (superRef1 /: (vargss map (_ map (_.duplicate))))(Apply.apply)
+            atPos(supertpt.pos.focus)((superRef1 /: (vargss map (_ map (_.duplicate))))(Apply.apply))
           } match {
             case EmptyTree => MissingTypeArgumentsForParentError(supertpt)
             case tpt => supertpt = TypeTree(tpt.tpe) setPos supertpt.pos.focus
@@ -1962,7 +1962,7 @@ trait Typers extends Modes with Adaptations with Tags {
               val primaryCtor = treeInfo.firstConstructor(templ.body)
               val primaryCtor1 = deriveDefDef(primaryCtor) {
                 case block @ Block(earlyVals :+ Apply(superRef, Nil), unit) =>
-                  val superCall = (superRef /: vargss)(Apply.apply)
+                  val superCall = atPos(parents1.head.pos.focus)((superRef /: vargss)(Apply.apply))
                   treeCopy.Block(block, earlyVals :+ superCall, unit)
               }
               body map { case `primaryCtor` => primaryCtor1; case stat => stat }
