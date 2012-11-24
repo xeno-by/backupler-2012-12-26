@@ -1544,7 +1544,7 @@ trait Typers extends Modes with Adaptations with Tags {
       if (probe.isTrait || inMixinPosition) {
         // TODO: fix `templateParents` so that it doesn't mix up Nils with ListOfNils
         // so far `trait T; class C extends T()` is not an error precisely because of that
-        if (probe.isTrait && !vargssAreTrivial) ConstrArgsInTraitParentTpeError(encodedtpt, probe)
+        if (probe.isTrait && !vargssAreTrivial) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
         typedType(decodedtpt)
       } else {
         var supertpt = typedTypeConstructor(decodedtpt)
@@ -1558,7 +1558,7 @@ trait Typers extends Modes with Adaptations with Tags {
               nme.CONSTRUCTOR)
             (superRef1 /: (vargss map (_ map (_.duplicate))))(Apply.apply)
           } match {
-            case EmptyTree => MissingTypeArgumentsParentTpeError(supertpt)
+            case EmptyTree => MissingTypeArgumentsForParentError(supertpt)
             case tpt => supertpt = TypeTree(tpt.tpe) setPos supertpt.pos.focus
           }
         }
@@ -1955,13 +1955,18 @@ trait Typers extends Modes with Adaptations with Tags {
           val body1 = templ.body flatMap rewrappingWrapperTrees(namer.addDerivedTrees(Typer.this, _))
           parents1.head match {
             case CarriesSuperCallArgs(vargss) =>
-              val primaryCtor = treeInfo.firstConstructor(templ.body)
-              val primaryCtor1 = deriveDefDef(primaryCtor) {
-                case block @ Block(earlyVals :+ Apply(superRef, Nil), unit) =>
-                  val superCall = (superRef /: vargss)(Apply.apply)
-                  treeCopy.Block(block, earlyVals :+ superCall, unit)
+              if (clazz.isTrait) {
+                ConstrArgsInParentOfTraitError(parents1.head, clazz)
+                body1
+              } else {
+                val primaryCtor = treeInfo.firstConstructor(templ.body)
+                val primaryCtor1 = deriveDefDef(primaryCtor) {
+                  case block @ Block(earlyVals :+ Apply(superRef, Nil), unit) =>
+                    val superCall = (superRef /: vargss)(Apply.apply)
+                    treeCopy.Block(block, earlyVals :+ superCall, unit)
+                }
+                body1 map { case `primaryCtor` => primaryCtor1; case stat => stat }
               }
-              body1 map { case `primaryCtor` => primaryCtor1; case stat => stat }
             case _ => body1
           }
         }

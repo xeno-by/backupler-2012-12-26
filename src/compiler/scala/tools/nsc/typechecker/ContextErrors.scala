@@ -189,10 +189,13 @@ trait ContextErrors {
       }
 
       // additional parentTypes errors
-      def ConstrArgsInTraitParentTpeError(arg: Tree, parent: Symbol) =
+      def ConstrArgsInParentWhichIsTraitError(arg: Tree, parent: Symbol) =
         issueNormalTypeError(arg, parent + " is a trait; does not take constructor arguments")
 
-      def MissingTypeArgumentsParentTpeError(supertpt: Tree) =
+      def ConstrArgsInParentOfTraitError(arg: Tree, parent: Symbol) =
+        issueNormalTypeError(arg, "parents of traits may not have parameters")
+
+      def MissingTypeArgumentsForParentError(supertpt: Tree) =
         issueNormalTypeError(supertpt, "missing type arguments")
 
       // typedIdent
