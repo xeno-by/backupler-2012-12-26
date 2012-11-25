@@ -1280,7 +1280,10 @@ trait ContextErrors {
       fail()
     }
 
-    private def implRefError(message: String) = genericError(methPart(macroDdef.rhs), message)
+    private def implRefError(message: String) = {
+      val treeInfo.Applied(implRef, _, _) = macroDdef.rhs
+      genericError(implRef, message)
+    }
 
     private def compatibilityError(message: String) =
       implRefError(

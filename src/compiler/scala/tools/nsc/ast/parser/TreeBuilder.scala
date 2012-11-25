@@ -222,9 +222,8 @@ abstract class TreeBuilder {
       // instead of parents = Ident(C), argss = Nil as before
       // this change works great for things that are actually templates
       // but in this degenerate case we need to perform postprocessing
-      val tpt = treeInfo.unwrapApply(parents.head)
-      val argss = treeInfo.argumentss(parents.head)
-      atPos(npos union cpos) { New(tpt, argss) }
+      val app = treeInfo.dissectApplied(parents.head)
+      atPos(npos union cpos) { New(app.callee, app.argss) }
     } else {
       val x = tpnme.ANON_CLASS_NAME
       atPos(npos union cpos) {
