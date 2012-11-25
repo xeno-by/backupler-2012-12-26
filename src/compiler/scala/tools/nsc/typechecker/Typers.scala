@@ -1562,7 +1562,10 @@ trait Typers extends Modes with Adaptations with Tags {
         if (supertparams.nonEmpty) {
           typedPrimaryConstrBody(templ) {
             val supertpe = PolyType(supertparams, appliedType(supertpt.tpe, supertparams map (_.tpeHK)))
-            atPos(supertpt.pos.focus)(New(supertpe, mmap(argss)(_.duplicate)))
+            val supercall = New(supertpe, mmap(argss)(_.duplicate))
+            val treeInfo.Applied(Select(ctor, nme.CONSTRUCTOR), _, _) = supercall
+            ctor setType supertpe // this is an essential hack, otherwise it will occasionally fail to typecheck
+            atPos(supertpt.pos.focus)(supercall)
           } match {
             case EmptyTree => MissingTypeArgumentsParentTpeError(supertpt)
             case tpt => supertpt = TypeTree(tpt.tpe) setPos supertpt.pos.focus
