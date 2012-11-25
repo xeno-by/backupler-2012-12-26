@@ -15,7 +15,7 @@ import scala.reflect.{ classTag, ClassTag }
 import scala.tools.partest.TestUtil.intercept
 
 trait TestBase {
-  
+
   def once(body: (() => Unit) => Unit) {
     val sv = new SyncVar[Boolean]
     body(() => sv put true)
@@ -48,18 +48,18 @@ trait FutureCallbacks extends TestBase {
         assert(x == 1)
     }
   }
-  
+
   def testOnSuccessWhenCompleted(): Unit = once {
     done =>
     var x = 0
     val f = future {
       x = 1
     }
-    f onSuccess { 
+    f onSuccess {
       case _ =>
       assert(x == 1)
       x = 2
-      f onSuccess { 
+      f onSuccess {
         case _ =>
           assert(x == 2)
           done()
@@ -77,7 +77,7 @@ trait FutureCallbacks extends TestBase {
       case _ => assert(false)
     }
   }
-  
+
   def testOnFailure(): Unit = once {
     done =>
     var x = 0
@@ -115,7 +115,7 @@ trait FutureCallbacks extends TestBase {
         assert(false)
     }
   }
-  
+
   def testOnFailureWhenTimeoutException(): Unit = once {
     done =>
     val f = future[Unit] {
@@ -134,7 +134,7 @@ trait FutureCallbacks extends TestBase {
         assert(false)
     }
   }
-  
+
   testOnSuccess()
   testOnSuccessWhenCompleted()
   testOnSuccessWhenFailed()
@@ -144,7 +144,7 @@ trait FutureCallbacks extends TestBase {
   //TODO: this test is currently problematic, because NonFatal does not match InterruptedException
   //testOnFailureWhenSpecialThrowable(7, new InterruptedException)
   testOnFailureWhenTimeoutException()
-  
+
 }
 
 
@@ -368,7 +368,7 @@ trait FutureCombinators extends TestBase {
       val f = future[Int] { 5 }
       f foreach { x => p.success(x * 2) }
       val g = p.future
-      
+
       g.onSuccess {
         case res: Int =>
           done()
@@ -388,7 +388,7 @@ trait FutureCombinators extends TestBase {
       f foreach { x => p.success(x * 2) }
       f onFailure { case _ => p.failure(new Exception) }
       val g = p.future
-      
+
       g.onSuccess {
         case _ =>
           done()
@@ -440,7 +440,7 @@ trait FutureCombinators extends TestBase {
       assert(any == cause)
     }
   }
-  
+
   def testRecoverWithSuccess(): Unit = once {
     done =>
     val cause = new RuntimeException
@@ -480,7 +480,7 @@ trait FutureCombinators extends TestBase {
       assert(any == cause)
     }
   }
- 
+
   def testZipSuccess(): Unit = once {
     done =>
     val f = future { 5 }
@@ -610,7 +610,7 @@ trait FutureProjections extends TestBase {
         assert(false)
     }
   }
-  
+
   def testFailedFailureOnSuccess(): Unit = once {
     done =>
     val cause = new RuntimeException
@@ -623,7 +623,7 @@ trait FutureProjections extends TestBase {
         done()
     }
   }
-  
+
   def testFailedSuccessOnComplete(): Unit = once {
     done =>
     val f = future { 0 }
@@ -635,7 +635,7 @@ trait FutureProjections extends TestBase {
         done()
     }
   }
-  
+
   def testFailedSuccessOnFailure(): Unit = once {
     done =>
     val f = future { 0 }
@@ -644,7 +644,7 @@ trait FutureProjections extends TestBase {
       done()
     }
   }
-  
+
   def testFailedFailureAwait(): Unit = once {
     done =>
     val cause = new RuntimeException
@@ -654,7 +654,7 @@ trait FutureProjections extends TestBase {
     assert(Await.result(f.failed, Duration(500, "ms")) == cause)
     done()
   }
-  
+
   def testFailedSuccessAwait(): Unit = once {
     done =>
     val f = future { 0 }
@@ -688,7 +688,7 @@ trait FutureProjections extends TestBase {
       done()
     } onFailure { case x => throw x }
   }
-  
+
   testFailedFailureOnComplete()
   testFailedFailureOnSuccess()
   testFailedSuccessOnComplete()
@@ -697,7 +697,7 @@ trait FutureProjections extends TestBase {
   testFailedSuccessAwait()
   testAwaitPositiveDuration()
   testAwaitNegativeDuration()
-  
+
 }
 
 
@@ -710,7 +710,7 @@ trait Blocking extends TestBase {
     Await.result(f, Duration(500, "ms"))
     done()
   }
-  
+
   def testAwaitFailure(): Unit = once {
     done =>
     val cause = new RuntimeException
@@ -726,16 +726,16 @@ trait Blocking extends TestBase {
         done()
     }
   }
-  
+
   def testFQCNForAwaitAPI(): Unit = once {
     done =>
-    
+
     assert(classOf[CanAwait].getName == "scala.concurrent.CanAwait")
     assert(Await.getClass.getName == "scala.concurrent.Await")
-    
+
     done()
   }
-  
+
   testAwaitSuccess()
   testAwaitFailure()
   testFQCNForAwaitAPI()
@@ -764,7 +764,7 @@ trait BlockContexts extends TestBase {
   // test BlockContext inside BlockContext.withBlockContext
   def testPushCustom(): Unit = {
     val orig = BlockContext.current
-    val customBC = new BlockContext() {
+    val customBC = new BlockContext {
       override def blockOn[T](thunk: =>T)(implicit permission: CanAwait): T = orig.blockOn(thunk)
     }
 
@@ -780,7 +780,7 @@ trait BlockContexts extends TestBase {
   // test BlockContext after a BlockContext.push
   def testPopCustom(): Unit = {
     val orig = BlockContext.current
-    val customBC = new BlockContext() {
+    val customBC = new BlockContext {
       override def blockOn[T](thunk: =>T)(implicit permission: CanAwait): T = orig.blockOn(thunk)
     }
 
@@ -805,7 +805,7 @@ trait Promises extends TestBase {
     done =>
     val p = promise[Int]()
     val f = p.future
-    
+
     f onSuccess {
       case x =>
         done()
@@ -816,7 +816,7 @@ trait Promises extends TestBase {
         done()
         assert(false)
     }
-    
+
     p.success(5)
   }
 
@@ -852,7 +852,7 @@ trait CustomExecutionContext extends TestBase {
 
     override def execute(runnable: Runnable) = {
       _count.incrementAndGet()
-      val wrapper = new Runnable() {
+      val wrapper = new Runnable {
         override def run() = {
           enterEC()
           try {
@@ -957,13 +957,13 @@ trait ExecutionContextPrepare extends TestBase {
   val theLocal = new ThreadLocal[String] {
     override protected def initialValue(): String = ""
   }
-  
+
   class PreparingExecutionContext extends ExecutionContext {
     def delegate = ExecutionContext.global
-    
+
     override def execute(runnable: Runnable): Unit =
       delegate.execute(runnable)
-    
+
     override def prepare(): ExecutionContext = {
       // save object stored in ThreadLocal storage
       val localData = theLocal.get
@@ -981,13 +981,13 @@ trait ExecutionContextPrepare extends TestBase {
         }
       }
     }
-    
+
     override def reportFailure(t: Throwable): Unit =
       delegate.reportFailure(t)
   }
-  
+
   implicit val ec = new PreparingExecutionContext
-  
+
   def testOnComplete(): Unit = once {
     done =>
     theLocal.set("secret")
@@ -998,7 +998,7 @@ trait ExecutionContextPrepare extends TestBase {
         done()
     }
   }
-  
+
   def testMap(): Unit = once {
     done =>
     theLocal.set("secret2")
@@ -1008,7 +1008,7 @@ trait ExecutionContextPrepare extends TestBase {
       done()
     }
   }
-  
+
   testOnComplete()
   testMap()
 }

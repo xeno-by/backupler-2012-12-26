@@ -995,6 +995,8 @@ trait Trees extends api.Trees { self: SymbolTable =>
   def Apply(sym: Symbol, args: Tree*): Tree =
     Apply(Ident(sym), args.toList)
 
+  def New(tpe: Type, argss: List[List[Tree]]): Tree = New(TypeTree(tpe), argss)
+
   /** Factory method for object creation `new tpt(args_1)...(args_n)`
    *  A `New(t, as)` is expanded to: `(new t).<init>(as)`
    */

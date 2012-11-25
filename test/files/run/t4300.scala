@@ -18,7 +18,7 @@ object Test {
   def main(args : Array[String]) : Unit = {
     val b = new B()
     b.b()
-    new b.C(){}.c()
+    new b.C{}.c()
     b.g() // was ClassCastException
     b.h() // was ClassCastException
   }
