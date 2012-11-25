@@ -4158,8 +4158,8 @@ trait Typers extends Modes with Adaptations with Tags {
           return fail()
 
         if (treeInfo.mayBeVarGetter(varsym)) {
-          treeInfo.methPart(lhs1) match {
-            case Select(qual, name) =>
+          lhs1 match {
+            case treeInfo.Applied(Select(qual, name), _, _) =>
               val sel = Select(qual, nme.getterToSetter(name.toTermName)) setPos lhs.pos
               val app = Apply(sel, List(rhs)) setPos tree.pos
               return typed(app, mode, pt)
@@ -4577,9 +4577,9 @@ trait Typers extends Modes with Adaptations with Tags {
             }
 
           case Apply(fn, indices) =>
-            treeInfo.methPart(fn) match {
-              case Select(table, nme.apply) => mkUpdate(table, indices)
-              case _                        => UnexpectedTreeAssignmentConversionError(qual)
+            fn match {
+              case treeInfo.Applied(Select(table, nme.apply), _, _) => mkUpdate(table, indices)
+              case _  => UnexpectedTreeAssignmentConversionError(qual)
             }
         }
         typed1(tree1, mode, pt)
