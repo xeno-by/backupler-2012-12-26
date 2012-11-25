@@ -1550,7 +1550,7 @@ trait Typers extends Modes with Adaptations with Tags {
       probe.initialize
 
       if (probe.isTrait || inMixinPosition) {
-        if (!argssAreTrivial) {
+        if (argss.nonEmpty) {
           if (probe.isTrait) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
           else () // a class in a mixin position - this warrants an error in `validateParentClasses`
                   // therefore here we do nothing, e.g. don't check that the # of ctor arguments
