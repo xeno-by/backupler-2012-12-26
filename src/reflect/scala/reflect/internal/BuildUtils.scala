@@ -49,6 +49,8 @@ trait BuildUtils { self: SymbolTable =>
 
     def emptyValDef: ValDef = self.emptyValDef
 
+    def pendingSuperCall: Apply = self.pendingSuperCall
+
     def This(sym: Symbol): Tree = self.This(sym)
 
     def Select(qualifier: Tree, sym: Symbol): Select = self.Select(qualifier, sym)
