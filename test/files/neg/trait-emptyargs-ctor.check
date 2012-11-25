@@ -1,0 +1,7 @@
+trait-emptyargs-ctor.scala:4: error: trait T is a trait; does not take constructor arguments
+class D extends T()
+                ^
+trait-emptyargs-ctor.scala:8: error: trait T is a trait; does not take constructor arguments
+  new T() {}
+      ^
+two errors found

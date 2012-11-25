@@ -2747,12 +2747,7 @@ self =>
       def readAppliedParent() = {
         val start = in.offset
         val parent = startAnnotType()
-        val argss = (
-          // TODO: the insertion of ListOfNil here is where "new Foo" becomes
-          // indistinguishable from "new Foo()".
-          if (in.token == LPAREN) multipleArgumentExprs()
-          else ListOfNil
-        )
+        val argss = if (in.token == LPAREN) multipleArgumentExprs() else Nil
         parents += atPos(start, in.offset)((parent /: argss)(Apply.apply))
       }
       readAppliedParent()

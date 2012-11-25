@@ -1537,7 +1537,6 @@ trait Typers extends Modes with Adaptations with Tags {
     private def typedParentType(encodedtpt: Tree, templ: Template, inMixinPosition: Boolean): Tree = {
       val app = treeInfo.dissectApplied(encodedtpt)
       val (treeInfo.Applied(core, targs, argss), decodedtpt) = (app, app.callee)
-      val argssAreTrivial = argss == Nil || argss == ListOfNil
 
       // we cannot avoid cyclic references with `initialize` here, because when type macros arrive,
       // we'll have to check the probe for isTypeMacro anyways.
@@ -1550,7 +1549,7 @@ trait Typers extends Modes with Adaptations with Tags {
       if (probe.isTrait || inMixinPosition) {
         // TODO: fix `templateParents` so that it doesn't mix up Nils with ListOfNils
         // at the moment `trait T; class C extends T()` is not an error precisely because of that
-        if (!argssAreTrivial) {
+        if (argss.nonEmpty) {
           if (probe.isTrait) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
           else () // a class in a mixin position - this warrants an error in `validateParentClasses`
                   // therefore here we do nothing, e.g. don't check that the # of ctor arguments
@@ -1563,17 +1562,17 @@ trait Typers extends Modes with Adaptations with Tags {
         if (supertparams.nonEmpty) {
           typedPrimaryConstrBody(templ) { superRef =>
             val supertpe = PolyType(supertparams, appliedType(supertpt.tpe, supertparams map (_.tpeHK)))
-            val superRef1: Tree = treeCopy.Select(
-              superRef,
-              New(TypeTree(supertpe)) setType supertpe,
-              nme.CONSTRUCTOR)
-            atPos(supertpt.pos.focus)((superRef1 /: (argss map (_ map (_.duplicate))))(Apply.apply))
+            atPos(supertpt.pos.focus)(New(supertpe, mmap(argss)(_.duplicate)))
           } match {
             case EmptyTree => MissingTypeArgumentsParentTpeError(supertpt)
             case tpt => supertpt = TypeTree(tpt.tpe) setPos supertpt.pos.focus
           }
         }
-        if (argssAreTrivial) supertpt else supertpt updateAttachment SuperCallArgsAttachment(argss)
+        // this is the place where we tell the typer what argss should be used for the super call
+        // if argss are nullary or empty, then (see the docs for `typedPrimaryConstrBody`)
+        // the super call dummy is already good enough, so we don't need to do anything
+        if (argss == Nil || argss == ListOfNil) supertpt
+        else supertpt updateAttachment SuperCallArgsAttachment(argss)
       }
     }
 
