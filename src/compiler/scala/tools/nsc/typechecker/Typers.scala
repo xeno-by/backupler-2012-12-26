@@ -52,8 +52,10 @@ trait Typers extends Modes with Adaptations with Tags {
 
   object UnTyper extends Traverser {
     override def traverse(tree: Tree) = {
-      if (tree != EmptyTree) tree.tpe = null
-      if (tree.hasSymbol) tree.symbol = NoSymbol
+      if (!tree.isDummy) {
+        tree.tpe = null
+        if (tree.hasSymbol) tree.symbol = NoSymbol
+      }
       super.traverse(tree)
     }
   }
@@ -1559,7 +1561,7 @@ trait Typers extends Modes with Adaptations with Tags {
         var supertpt = typedTypeConstructor(decodedtpt)
         val supertparams = if (supertpt.hasSymbol) supertpt.symbol.typeParams else Nil
         if (supertparams.nonEmpty) {
-          typedPrimaryConstrBody(templ) { superRef =>
+          typedPrimaryConstrBody(templ) {
             val supertpe = PolyType(supertparams, appliedType(supertpt.tpe, supertparams map (_.tpeHK)))
             val supercall = New(supertpe, mmap(argss)(_.duplicate))
             val treeInfo.Applied(Select(ctor, nme.CONSTRUCTOR), _, _) = supercall
@@ -1578,8 +1580,8 @@ trait Typers extends Modes with Adaptations with Tags {
     }
 
     /** Typechecks the mishmash of trees that happen to be stuffed into the primary constructor of a given template.
-     *  Before commencing the typecheck applies `superCallTransform` to a super call (if the latter exists).
-     *  The transform can return `EmptyTree`, in which case the super call is replaced with a literal unit.
+     *  Before commencing the typecheck, replaces the `pendingSuperCall` dummy with the result of `actualSuperCall`.
+     *  `actualSuperCall` can return `EmptyTree`, in which case the dummy is replaced with a literal unit.
      *
      *  ***Return value and side effects***
      *
@@ -1604,34 +1606,14 @@ trait Typers extends Modes with Adaptations with Tags {
      *    Block(List(
      *      ValDef(NoMods, x, TypeTree(), 2)
      *      ValDef(NoMods, y, TypeTree(), 4)
-     *      Apply(Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR)), List()),
+     *      global.pendingSuperCall,
      *      Literal(Constant(())))
      *
-     *  Note the Select(Super(_, _), nme.CONSTRUCTOR) part. This is the representation of
-     *  a fill-me-in-later supercall dummy. The argss are Nil, which encodes the fact
-     *  that supercall argss are unknown during parsing and need to be transplanted from one of the parent types.
-     *  Read more about why the argss are unknown in `tools.nsc.ast.Trees.Template`.
-     *
-     *  The entire Apply(Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR)), List()) is a dummy,
-     *  and it's the one and only possible representation that can be emitted by parser.
-     *
-     *  Despite of being unwieldy, this tree is quite convenient because:
-     *    * It works as is for the case when no processing is required (empty ctor args for the superclass)
-     *    * Stripping off the Apply produces a core that only needs rewrapping with applications of actual argss.
-     *
-     *  For some time I was thinking of using just Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR)),
-     *  but that one required wrapping even if the superclass doesn't take any argss.
-     *
-     *  Another option would be to introduce a singleton tree akin to `emptyValDef` and use it as a dummy.
-     *  Unfortunately this won't work out of the box, because the Super part is supposed to get attributed
-     *  during `typedPrimaryConstrBody`.
-     *
-     *  We could introduce another attachment for that or change SuperCallArgsAttachment
-     *  to accommodate for the attributed Super, and then using the attached info to adjust the primary constructor
-     *  during typedTemplate. However, given the scope of necessary changes (beyond a few lines) and the fact that,
-     *  according to Martin, the whole thing is to be rewritten soon, I'd say we don't do the follow-up refactoring.
+     *  Note the `pendingSuperCall` part. This is the representation of a fill-me-in-later supercall dummy,
+     *  which encodes the fact that supercall argss are unknown during parsing and need to be transplanted
+     *  from one of the parent types. Read more about why the argss are unknown in `tools.nsc.ast.Trees.Template`.
      */
-    private def typedPrimaryConstrBody(templ: Template)(superCallTransform: Tree => Tree): Tree =
+    private def typedPrimaryConstrBody(templ: Template)(actualSuperCall: => Tree): Tree =
       treeInfo.firstConstructor(templ.body) match {
         case ctor @ DefDef(_, _, _, vparamss, _, cbody @ Block(cstats, cunit)) =>
           val (preSuperStats, superCall) = {
@@ -1639,7 +1621,7 @@ trait Typers extends Modes with Adaptations with Tags {
             (stats map (_.duplicate), if (rest.isEmpty) EmptyTree else rest.head.duplicate)
           }
           val superCall1 = (superCall match {
-            case Apply(superRef @ Select(Super(_, _), nme.CONSTRUCTOR), Nil) => superCallTransform(superRef)
+            case global.pendingSuperCall => actualSuperCall
             case EmptyTree => EmptyTree
           }) orElse cunit
           val cbody1 = treeCopy.Block(cbody, preSuperStats, superCall1)
@@ -1719,7 +1701,7 @@ trait Typers extends Modes with Adaptations with Tags {
           // and therefore early fields have their type trees not assigned
           // here we detect this situation and take preventive measures
           if (treeInfo.hasUntypedPreSuperFields(templ.body))
-            typedPrimaryConstrBody(templ)(superRef => EmptyTree)
+            typedPrimaryConstrBody(templ)(EmptyTree)
 
           supertpts mapConserve (tpt => checkNoEscaping.privates(context.owner, tpt))
         } catch {
@@ -1977,6 +1959,8 @@ trait Typers extends Modes with Adaptations with Tags {
         validateParentClasses(parents1, selfType)
       if (clazz.isCase)
         validateNoCaseAncestor(clazz)
+      if (clazz.isTrait && carriesSuperCallArgs(parents1.head))
+        ConstrArgsInParentOfTraitError(parents1.head, clazz)
 
       if ((clazz isSubClass ClassfileAnnotationClass) && !clazz.owner.isPackageClass)
         unit.error(clazz.pos, "inner classes cannot be classfile annotations")
@@ -1988,23 +1972,15 @@ trait Typers extends Modes with Adaptations with Tags {
         val body =
           if (isPastTyper || reporter.hasErrors) templ.body
           else templ.body flatMap rewrappingWrapperTrees(namer.addDerivedTrees(Typer.this, _))
-        parents1.head match {
-          case CarriesSuperCallArgs(argss) =>
-            if (clazz.isTrait) {
-              ConstrArgsInParentOfTraitError(parents1.head, clazz)
-              body
-            } else {
-              val primaryCtor = treeInfo.firstConstructor(templ.body)
-              val primaryCtor1 = deriveDefDef(primaryCtor) {
-                case block @ Block(earlyVals :+ Apply(superRef, Nil), unit) =>
-                  val pos = wrappingPos(superRef.pos, argss.flatten)
-                  val superCall = atPos(pos)((superRef /: argss)(Apply.apply))
-                  treeCopy.Block(block, earlyVals :+ superCall, unit)
-              }
-              body map { case `primaryCtor` => primaryCtor1; case stat => stat }
-            }
-          case _ => body
+        val primaryCtor = treeInfo.firstConstructor(body)
+        val primaryCtor1 = primaryCtor match {
+          case DefDef(_, _, _, _, _, Block(earlyVals :+ global.pendingSuperCall, unit)) =>
+            val argss = superCallArgs(parents1.head) getOrElse Nil
+            val superCall = atPos(wrappingPos(parents1.head.pos, argss.flatten))(PrimarySuperCall(argss))
+            deriveDefDef(primaryCtor)(block => treeCopy.Block(block, earlyVals :+ superCall, unit))
+          case _ => primaryCtor
         }
+        body mapConserve { case `primaryCtor` => primaryCtor1; case stat => stat }
       }
 
       val body1 = typedStats(body, templ.symbol)
