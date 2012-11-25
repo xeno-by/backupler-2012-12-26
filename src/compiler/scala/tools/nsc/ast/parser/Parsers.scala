@@ -2748,7 +2748,7 @@ self =>
         val start = in.offset
         val parent = startAnnotType()
         val argss = if (in.token == LPAREN) multipleArgumentExprs() else Nil
-        parents += atPos(start, in.offset)((parent /: argss)(Apply.apply))
+        parents += atPos(start)((parent /: argss)(Apply.apply))
       }
       readAppliedParent()
       while (in.token == WITH) { in.nextToken(); readAppliedParent() }
