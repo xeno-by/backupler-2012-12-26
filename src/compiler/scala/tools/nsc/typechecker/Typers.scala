@@ -5280,6 +5280,10 @@ trait Typers extends Modes with Adaptations with Tags {
         }
       }
 
+      def typedDependentTypeTree(tree: DependentTypeTree) = {
+        ???
+      }
+
       val sym: Symbol = tree.symbol
       if ((sym ne null) && (sym ne NoSymbol)) sym.initialize
 
@@ -5553,6 +5557,7 @@ trait Typers extends Modes with Adaptations with Tags {
         case tree: If                           => typedIf(tree)
         case tree: TypeApply                    => typedTypeApply(tree)
         case tree: AppliedTypeTree              => typedAppliedTypeTree(tree)
+        case tree: DependentTypeTree            => typedDependentTypeTree(tree)
         case tree: Bind                         => typedBind(tree)
         case tree: Function                     => typedFunction(tree)
         case tree: Match                        => typedVirtualizedMatch(tree)

@@ -744,6 +744,11 @@ abstract class UnPickler /*extends scala.reflect.generic.UnPickler*/ {
           val whereClauses = until(end, readTreeRef)
           ExistentialTypeTree(tpt, whereClauses)
 
+        case DEPENDENTTYPEtree =>
+          val tpt = readTreeRef()
+          val args = until(end, readTreeRef)
+          DependentTypeTree(tpt, args)
+
         case _ =>
           noSuchTreeTag(tag, end)
       }
