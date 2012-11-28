@@ -22,7 +22,7 @@ trait Printers extends api.Printers { self: SymbolTable =>
   def quotedName(name: Name, decode: Boolean): String = {
     var s = if (decode) name.decode else name.toString
     val term = name.toTermName
-    s = s + (if (name.isTermName) "#E" else "#Y")
+    // s = s + (if (name.isTermName) "#E" else "#Y")
     if (nme.keywords(term) && term != nme.USCOREkw) "`%s`" format s
     else s
   }
