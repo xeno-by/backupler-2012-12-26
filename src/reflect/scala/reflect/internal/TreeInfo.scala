@@ -695,7 +695,10 @@ abstract class TreeInfo {
     }
   }
 
-  def isApplyDynamicName(name: Name) = (name == nme.updateDynamic) || (name == nme.selectDynamic) || (name == nme.applyDynamic) || (name == nme.applyDynamicNamed)
+  def isApplyDynamicName(name0: Name) = {
+    val name = name0.toTermName
+    (name == nme.updateDynamic) || (name == nme.selectDynamic) || (name == nme.applyDynamic) || (name == nme.applyDynamicNamed) || (name == nme.typeApplyDynamic)
+  }
 
   class DynamicApplicationExtractor(nameTest: Name => Boolean) {
     def unapply(tree: Tree) = tree match {

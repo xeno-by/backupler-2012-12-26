@@ -4003,7 +4003,27 @@ trait Typers extends Modes with Adaptations with Tags {
         fun match {
           // drop the application for an applyDynamic or selectDynamic call since it has been pushed down
           case treeInfo.DynamicApplication(_, _) => fun
-          case _ => TypedApplyDoesNotTakeTpeParametersError(tree, fun)
+          case fun if fun.toString.contains(nme.typeApplyDynamic.toString) => fun
+          case _ =>
+            val treeInfo.Applied(core, _, _) = fun
+            val flavor = core match { case Select(_, flavor) => flavor; case _ => nme.EMPTY }
+            if (treeInfo.isApplyDynamicName(flavor)) {
+              def mkTag(arg: Tree) = Apply(TypeApply(Ident(ClassTagModule), List(TypeTree(arg.tpe))), List(Literal(Constant(null))))
+              val rewritten1 = Apply(Select(fun, nme.typeApplyDynamic), args map mkTag).duplicate
+              dyna.wrapErrors(rewritten1, (_.typed1(rewritten1, EXPRmode, WildcardType))) match {
+                case Right(termResult) => termResult
+                case Left(err) =>
+                  val rewritten2 = DependentTypeTree(new Select(fun, nme.typeApplyDynamic.toTypeName), args map mkTag).duplicate
+                  dyna.wrapErrors(rewritten2, (_.typed1(rewritten2, TYPEmode, WildcardType))) match {
+                    case Right(typeResult) =>
+                      try macroExpand(this, typed1(desugarTypeMacro(typeResult), EXPRmode, WildcardType))
+                      catch { case ex: Throwable => abort(ex.toString) }
+                    case Left(err) => err()
+                  }
+              }
+            } else {
+              TypedApplyDoesNotTakeTpeParametersError(tree, fun)
+            }
         }
     }
 
@@ -4045,7 +4065,7 @@ trait Typers extends Modes with Adaptations with Tags {
           case _ => gen.mkTuple(List(CODE.LIT(""), arg))
         }
         val t = treeCopy.Apply(orig, fun, args map argToBinding)
-        wrapErrors(t, _.typed(t, mode, pt))
+        wrapErrors(t, _.typed(t, mode, pt)) match { case Left(err) => err(); case Right(succ) => succ }
       }
 
       /** Translate selection that does not typecheck according to the normal rules into a selectDynamic/applyDynamic.
@@ -4067,7 +4087,7 @@ trait Typers extends Modes with Adaptations with Tags {
        *  - simplest solution: have two method calls
        *
        */
-      def mkInvoke(cxTree: Tree, tree: Tree, qual: Tree, name: Name): Option[Tree] = {
+      def mkInvoke(cxTree: Tree, tree: Tree, qual: Tree, name: Name, termLevel: Boolean): Option[Tree] = {
         log(s"dyna.mkInvoke($cxTree, $tree, $qual, $name)")
         val treeSelection = treeInfo.dissectApplied(tree).core
         def isDesugaredApply = treeSelection match {
@@ -4100,9 +4120,10 @@ trait Typers extends Modes with Adaptations with Tags {
             case _                                => t.children flatMap findSelection headOption
           }
           findSelection(cxTree) match {
-            case Some((opName, tapply)) =>
-              val targs = treeInfo.dissectApplied(tapply).targs
-              val fun   = gen.mkTypeApply(Select(qual, opName), targs)
+            case Some((opName0, tapply)) =>
+              val opName = if (termLevel) opName0 else opName0.toTypeName
+              val targs  = treeInfo.dissectApplied(tapply).targs
+              val fun    = gen.mkTypeApply(Select(qual, opName), targs)
               atPos(qual.pos)(Apply(fun, Literal(Constant(name.decode)) :: Nil))
             case _ =>
               setError(tree)
@@ -4110,10 +4131,10 @@ trait Typers extends Modes with Adaptations with Tags {
         }
       }
 
-      def wrapErrors(tree: Tree, typeTree: Typer => Tree): Tree = {
+      def wrapErrors(tree: Tree, typeTree: Typer => Tree): Either[() => Tree, Tree] = {
         silent(typeTree) match {
-          case SilentResultValue(r) => r
-          case SilentTypeError(err) => DynamicRewriteError(tree, err)
+          case SilentResultValue(r) => Right(r)
+          case SilentTypeError(err) => Left(() => DynamicRewriteError(tree, err))
         }
       }
     }
@@ -4310,7 +4331,7 @@ trait Typers extends Modes with Adaptations with Tags {
         else if(dyna.isDynamicallyUpdatable(lhs1)) {
           val rhs1 = typed(rhs, EXPRmode | BYVALmode, WildcardType)
           val t = Apply(lhs1, List(rhs1))
-          dyna.wrapErrors(t, _.typed1(t, mode, pt))
+          dyna.wrapErrors(t, _.typed1(t, mode, pt)) match { case Left(err) => err(); case Right(succ) => succ }
         }
         else fail()
       }
@@ -4779,8 +4800,20 @@ trait Typers extends Modes with Adaptations with Tags {
        *  @return     ...
        */
       def typedSelect(tree: Tree, qual: Tree, name: Name): Tree = {
-        def asDynamicCall = dyna.mkInvoke(context.tree, tree, qual, name) map { t =>
-          dyna.wrapErrors(t, (_.typed1(t, mode, pt)))
+        def asDynamicCall = dyna.mkInvoke(context.tree, tree, qual, name, termLevel = true) map { t =>
+          dyna.wrapErrors(t, (_.typed1(t, mode, pt))) match {
+            case Right(termResult) => termResult
+            case Left(err) =>
+              dyna.mkInvoke(context.tree, tree, qual, name, termLevel = false) flatMap { t =>
+                dyna.wrapErrors(t, (_.typed1(t, TYPEmode, WildcardType))) match {
+                  case Right(typeResult) =>
+                    Some(typeResult)
+                  case Left(err) =>
+                    Some(err())
+                    // None
+                }
+              } getOrElse err()
+          }
         }
 
         val sym = tree.symbol orElse member(qual, name) orElse {
