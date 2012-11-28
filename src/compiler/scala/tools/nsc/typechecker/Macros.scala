@@ -164,7 +164,8 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       // I just named it "macro", because it's macro-related, but I could as well name it "foobar"
       val nucleus = Ident(newTermName("macro"))
       val wrapped = Apply(nucleus, payload map { case (k, v) => Assign(pickleAtom(k), pickleAtom(v)) })
-      val pickle = gen.mkTypeApply(wrapped, treeInfo.typeArguments(macroImplRef.duplicate))
+      val treeInfo.Applied(_, targs, _) = macroImplRef.duplicate
+      val pickle = gen.mkTypeApply(wrapped, targs)
 
       // assign NoType to all freshly created AST nodes
       // otherwise pickler will choke on tree.tpe being null
