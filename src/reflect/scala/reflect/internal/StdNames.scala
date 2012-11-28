@@ -781,6 +781,7 @@ trait StdNames {
     val tree : NameType                = "tree"
     val true_ : NameType               = "true"
     val typedProductIterator: NameType = "typedProductIterator"
+    val typeApplyDynamic: NameType     = "typeApplyDynamic"
     val typeTagToManifest: NameType    = "typeTagToManifest"
     val unapply: NameType              = "unapply"
     val unapplySeq: NameType           = "unapplySeq"
