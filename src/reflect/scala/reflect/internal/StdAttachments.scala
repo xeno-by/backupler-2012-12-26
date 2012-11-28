@@ -10,6 +10,7 @@ trait StdAttachments {
   trait Attachable {
     protected var rawatt: scala.reflect.macros.Attachments { type Pos = Position } = NoPosition
     def attachments = rawatt
+    private[scala] def attachments_=(attachments: scala.reflect.macros.Attachments { type Pos = Position }) = this.rawatt = attachments
     def updateAttachment[T: ClassTag](attachment: T): this.type = { rawatt = rawatt.update(attachment); this }
     def removeAttachment[T: ClassTag]: this.type = { rawatt = rawatt.remove[T]; this }
 
@@ -41,4 +42,8 @@ trait StdAttachments {
    *  (but think thrice before using that API - see the discussion at https://github.com/scala/scala/pull/1639).
    */
   case object SuppressMacroExpansionAttachment
+
+  /** Determines whether a tree should not be expanded, because someone has put SuppressMacroExpansionAttachment on it.
+   */
+  def suppressMacroExpansion(tree: Tree) = tree.attachments.get[SuppressMacroExpansionAttachment.type].isDefined
 }

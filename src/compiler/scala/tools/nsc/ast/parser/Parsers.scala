@@ -908,7 +908,13 @@ self =>
       }
       def simpleTypeRest(t: Tree): Tree = in.token match {
         case HASH     => simpleTypeRest(typeProjection(t))
+        // TODO: this allows stuff like List[Int][Int]. is it intentional?
         case LBRACKET => simpleTypeRest(atPos(t.pos.startOrPoint, t.pos.point)(AppliedTypeTree(t, typeArgs())))
+        case LPAREN   => simpleTypeRest({
+          val start = in.offset
+          val argss = if (in.token == LPAREN) multipleArgumentExprs() else Nil
+          atPos(t.pos.startOrPoint, t.pos.point)((t /: argss)(DependentTypeTree.apply))
+        })
         case _        => t
       }
 
@@ -2659,7 +2665,7 @@ self =>
         }
         in.token match {
           case EQUALS =>
-            in.nextToken()
+            in.nextTokenAllow(nme.MACROkw)
             if (in.token == IDENTIFIER && in.name == nme.MACROkw) { in.nextToken(); typeMacro(onlyNeedToReadBody = true) }
             else typeDefOrDcl(isDef = true)
           case SUPERTYPE | SUBTYPE | SEMI | NEWLINE | NEWLINES | COMMA | RBRACE =>

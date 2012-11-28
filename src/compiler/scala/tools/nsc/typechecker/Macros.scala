@@ -482,6 +482,20 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     }
   }
 
+  /** Transforms an application of a type macro into an equivalent
+   *  application of an underlying term macro. Does not perform expansion.
+   */
+  def desugarTypeMacro(tree: Tree): Tree = {
+    assert(treeInfo.isTypeMacro(tree))
+    val treeInfo.Applied(tpt, targs, argss) = tree
+    val macroName = nme.typeMacroSigName(tpt.symbol.name)
+    val macroRef = tpt match {
+      case Select(qual, _) => Select(qual, macroName)
+      case Ident(_) => Ident(macroName)
+    }
+    gen.mkApply(macroRef, targs, argss) setPos tree.pos
+  }
+
   /** Macro classloader that is used to resolve and run macro implementations.
    *  Loads classes from from -cp (aka the library classpath).
    *  Is also capable of detecting REPL and reusing its classloader.
@@ -694,6 +708,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
    *    the expandee with an error marker set   if there has been an error
    */
   def macroExpand(typer: Typer, expandee: Tree, mode: Int = EXPRmode, pt: Type = WildcardType): Tree = {
+    if (macroDebugVerbose) println(s"macroExpand: expandee = ${showRaw(expandee, printIds = true)}, mode = ${modeString(mode)}")
     val start = if (Statistics.canEnable) Statistics.startTimer(macroExpandNanos) else null
     if (Statistics.canEnable) Statistics.incCounter(macroExpandCount)
     try {
@@ -706,6 +721,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
               val numErrors    = reporter.ERROR.count
               def hasNewErrors = reporter.ERROR.count > numErrors
               // TODO: I'm not sure how to marry this mode with `mode` that is passed to `macroExpand`
+              // TODO: set originals for TypeTrees that result from macro type expansions
               val mode = if (expandee.symbol.isTermMacro) EXPRmode else TYPEmode
               val result = typer.context.withImplicitsEnabled(typer.typed(tree, mode, pt))
               macroTraceVerbose(s"""${if (hasNewErrors) "failed to typecheck" else "successfully typechecked"} against $phase $pt:\n$result\n""")(result)

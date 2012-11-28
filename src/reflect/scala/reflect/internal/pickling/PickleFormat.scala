@@ -102,6 +102,7 @@ object PickleFormat {
  *                  | 49 TREE len_Nat 43 APPLIEDTYPEtree type_Ref tree_Ref {tree_Ref}
  *                  | 49 TREE len_Nat 44 TYPEBOUNDStree type_Ref tree_Ref tree_Ref
  *                  | 49 TREE len_Nat 45 EXISTENTIALTYPEtree type_Ref tree_Ref {tree_Ref}
+ *                  | 49 TREE len_Nat 46 DEPENDENTTYPEtree type_Ref tree_Ref {tree_Ref}
  *                  | 50 MODIFIERS len_Nat flags_Long privateWithin_Ref
  *   SymbolInfo     = name_Ref owner_Ref flags_LongNat [privateWithin_Ref] info_Ref
  *   NameInfo       = <character sequence of length len_Nat in Utf8 format>
@@ -210,6 +211,7 @@ object PickleFormat {
     final val APPLIEDTYPEtree = 43
     final val TYPEBOUNDStree = 44
     final val EXISTENTIALTYPEtree = 45
+    final val DEPENDENTTYPEtree = 46
 
   final val MODIFIERS = 50
 

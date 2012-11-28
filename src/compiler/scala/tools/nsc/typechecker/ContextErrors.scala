@@ -225,6 +225,12 @@ trait ContextErrors {
         setError(tree)
       }
 
+      // typedDependentTypeTree
+      def DependentTypeNoParametersError(tree: Tree, errTpe: Type) = {
+        issueNormalTypeError(tree, errTpe + " does not take parameters")
+        setError(tree)
+      }
+
       // typedTypeDef
       def LowerBoundError(tree: TypeDef, lowB: Type, highB: Type) =
         issueNormalTypeError(tree, "lower bound "+lowB+" does not conform to upper bound "+highB)

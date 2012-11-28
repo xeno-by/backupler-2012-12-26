@@ -111,11 +111,12 @@ trait Trees { self: Universe =>
      *  Trees which are not `SymTree`s but which carry symbols do so by
      *  overriding `def symbol` to forward it elsewhere.  Examples:
      *
-     *    - `Super(qual, _)`              has `qual`'s symbol,
-     *    - `Apply(fun, args)`            has `fun`'s symbol,
-     *    - `TypeApply(fun, args)`        has `fun`'s symbol,
-     *    - `AppliedTypeTree(tpt, args)`  has `tpt`'s symbol,
-     *    - `TypeTree(tpe)`               has `tpe`'s `typeSymbol`, if `tpe != null`.
+     *    - `Super(qual, _)`               has `qual`'s symbol,
+     *    - `Apply(fun, args)`             has `fun`'s symbol,
+     *    - `TypeApply(fun, args)`         has `fun`'s symbol,
+     *    - `AppliedTypeTree(tpt, args)`   has `tpt`'s symbol,
+     *    - `DependentTypeTree(tpt, args)` has `tpt`'s symbol,
+     *    - `TypeTree(tpe)`                has `tpe`'s `typeSymbol`, if `tpe != null`.
      */
     def symbol: Symbol
 
@@ -2235,6 +2236,45 @@ trait Trees { self: Universe =>
     def args: List[Tree]
   }
 
+  /** Dependent type <tpt>(<vargs>)
+   *  @group Trees
+   *  @template
+   */
+  type DependentTypeTree >: Null <: TypTree with DependentTypeTreeApi
+
+  /** A tag that preserves the identity of the `DependentTypeTree` abstract type from erasure.
+   *  Can be used for pattern matching, instance tests, serialization and likes.
+   *  @group Tags
+   */
+  implicit val DependentTypeTreeTag: ClassTag[DependentTypeTree]
+
+  /** The constructor/extractor for `DependentTypeTree` instances.
+   *  @group Extractors
+   */
+  val DependentTypeTree: DependentTypeTreeExtractor
+
+  /** An extractor class to create and pattern match with syntax `DependentTypeTree(tpt, args)`.
+   *  This AST node corresponds to the following Scala code:
+   *
+   *    tpt(args)
+   *  @group Extractors
+   */
+  abstract class DependentTypeTreeExtractor {
+    def apply(tpt: Tree, args: List[Tree]): DependentTypeTree
+    def unapply(dependentTypeTree: DependentTypeTree): Option[(Tree, List[Tree])]
+  }
+
+  /** The API that all applied type trees support
+   *  @group API
+   */
+  trait DependentTypeTreeApi extends TypTreeApi { this: DependentTypeTree =>
+    /** The target of the application. */
+    def tpt: Tree
+
+    /** The arguments of the application. */
+    def args: List[Tree]
+  }
+
   /** Type bounds tree node
    *  @group Trees
    *  @template
@@ -2746,6 +2786,11 @@ trait Trees { self: Universe =>
      *  Having a tree as a prototype means that the tree's attachments, type and symbol will be copied into the result.
      */
     def AppliedTypeTree(tree: Tree, tpt: Tree, args: List[Tree]): AppliedTypeTree
+
+    /** Creates a `DependentTypeTree` node from the given components, having a given `tree` as a prototype.
+     *  Having a tree as a prototype means that the tree's attachments, type and symbol will be copied into the result.
+     */
+    def DependentTypeTree(tree: Tree, tpt: Tree, args: List[Tree]): DependentTypeTree
 
     /** Creates a `TypeBoundsTree` node from the given components, having a given `tree` as a prototype.
      *  Having a tree as a prototype means that the tree's attachments, type and symbol will be copied into the result.

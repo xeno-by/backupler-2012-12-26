@@ -487,6 +487,9 @@ abstract class TreeBrowsers {
       case AppliedTypeTree(tpe, args) =>
         tpe :: args
 
+      case DependentTypeTree(tpe, args) =>
+        tpe :: args
+
       case TypeBoundsTree(lo, hi) =>
         List(lo, hi)
 
