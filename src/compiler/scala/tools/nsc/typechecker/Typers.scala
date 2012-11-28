@@ -3997,7 +3997,18 @@ trait Typers extends Modes with Adaptations with Tags {
         fun match {
           // drop the application for an applyDynamic or selectDynamic call since it has been pushed down
           case treeInfo.DynamicApplication(_, _) => fun
-          case _ => TypedApplyDoesNotTakeTpeParametersError(tree, fun)
+          case fun if fun.toString.contains("typeApplyDynamic") => fun
+          case _ =>
+            val treeInfo.Applied(core, _, _) = fun
+            val flavor = core match { case Select(_, flavor) => flavor.toString; case _ => "" }
+            if (flavor == "selectDynamic" || flavor == "applyDynamic" || flavor == "applyDynamicNamed") {
+              def mkTag(arg: Tree) = resolveClassTag(NoPosition, arg.tpe, allowMaterialization = true)
+              val rewritten = Apply(Select(fun, newTermName("typeApplyDynamic")), args map mkTag)
+              // println("rewritten into: " + rewritten)
+              typed(rewritten)
+            } else {
+              TypedApplyDoesNotTakeTpeParametersError(tree, fun)
+            }
         }
     }
 
