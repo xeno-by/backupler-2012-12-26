@@ -4055,7 +4055,7 @@ trait Typers extends Modes with Adaptations with Tags {
        */
       def mkInvoke(cxTree: Tree, tree: Tree, qual: Tree, name: Name): Option[Tree] = {
         log(s"dyna.mkInvoke($cxTree, $tree, $qual, $name)")
-        val treeSelection = treeInfo.methPart(tree)
+        val treeSelection = treeInfo.dissectApplied(tree).core
         def isDesugaredApply = treeSelection match {
           case Select(`qual`, nme.apply) => true
           case _                         => false
@@ -4068,7 +4068,7 @@ trait Typers extends Modes with Adaptations with Tags {
           // not supported: foo.bar(a1,..., an: _*)
           def hasStar(args: List[Tree]) = treeInfo.isWildcardStarArgList(args)
           def applyOp(args: List[Tree]) = if (hasNamed(args)) nme.applyDynamicNamed else nme.applyDynamic
-          def matches(t: Tree)          = isDesugaredApply || treeInfo.methPart(t) == treeSelection
+          def matches(t: Tree)          = isDesugaredApply || treeInfo.dissectApplied(t).core == treeSelection
 
           /** Note that the trees which arrive here are potentially some distance from
            *  the trees of direct interest. `cxTree` is some enclosing expression which
@@ -4087,7 +4087,7 @@ trait Typers extends Modes with Adaptations with Tags {
           }
           findSelection(cxTree) match {
             case Some((opName, tapply)) =>
-              val targs = treeInfo.typeArguments(tapply)
+              val targs = treeInfo.dissectApplied(tapply).targs
               val fun   = gen.mkTypeApply(Select(qual, opName), targs)
               atPos(qual.pos)(Apply(fun, Literal(Constant(name.decode)) :: Nil))
             case _ =>
