@@ -4015,9 +4015,17 @@ trait Typers extends Modes with Adaptations with Tags {
                 case Left(err) =>
                   val rewritten2 = DependentTypeTree(new Select(fun, nme.typeApplyDynamic.toTypeName), args map mkTag).duplicate
                   dyna.wrapErrors(rewritten2, (_.typed1(rewritten2, TYPEmode, WildcardType))) match {
-                    case Right(typeResult) =>
-                      try macroExpand(this, typed1(desugarTypeMacro(typeResult), EXPRmode, WildcardType))
-                      catch { case ex: Throwable => abort(ex.toString) }
+                    // case Right(typeResult) =>
+                    //   try {
+                    //     println("EXPANDING")
+                    //     println("================================")
+                    //     val result = macroExpand(this, typed1(desugarTypeMacro(typeResult), EXPRmode, WildcardType))
+                    //     println("EXPANDED: " + showRaw(result, printTypes = true))
+                    //     println(scala.tools.nsc.util.stackTraceString(new Exception))
+                    //     result
+                    //   }
+                    //   catch { case ex: Throwable => abort(ex.toString) }
+                    case Right(typeResult) => typed1(desugarTypeMacro(typeResult), EXPRmode, WildcardType)
                     case Left(err) => err()
                   }
               }
@@ -4622,40 +4630,44 @@ trait Typers extends Modes with Adaptations with Tags {
                  if ((mode & EXPRmode) != 0) false else context.ambiguousErrors,
                  if ((mode & EXPRmode) != 0) tree else context.tree) match {
             case SilentResultValue(fun1) =>
-              val fun2 = if (stableApplication) stabilizeFun(fun1, mode, pt) else fun1
-              if (Statistics.canEnable) Statistics.incCounter(typedApplyCount)
-              def isImplicitMethod(tpe: Type) = tpe match {
-                case mt: MethodType => mt.isImplicit
-                case _ => false
-              }
-              val useTry = (
-                   !isPastTyper
-                && fun2.isInstanceOf[Select]
-                && !isImplicitMethod(fun2.tpe)
-                && ((fun2.symbol eq null) || !fun2.symbol.isConstructor)
-                && (mode & (EXPRmode | SNDTRYmode)) == EXPRmode
-              )
-              val res =
-                if (useTry) tryTypedApply(fun2, args)
-                else doTypedApply(tree, fun2, args, mode, pt)
+              if (treeInfo.isTypeMacro(fun1) && fun1.toString.contains("[")) {
+                typed(DependentTypeTree(fun1, args))
+              } else {
+                val fun2 = if (stableApplication) stabilizeFun(fun1, mode, pt) else fun1
+                if (Statistics.canEnable) Statistics.incCounter(typedApplyCount)
+                def isImplicitMethod(tpe: Type) = tpe match {
+                  case mt: MethodType => mt.isImplicit
+                  case _ => false
+                }
+                val useTry = (
+                     !isPastTyper
+                  && fun2.isInstanceOf[Select]
+                  && !isImplicitMethod(fun2.tpe)
+                  && ((fun2.symbol eq null) || !fun2.symbol.isConstructor)
+                  && (mode & (EXPRmode | SNDTRYmode)) == EXPRmode
+                )
+                val res =
+                  if (useTry) tryTypedApply(fun2, args)
+                  else doTypedApply(tree, fun2, args, mode, pt)
 
-            /*
-              if (fun2.hasSymbol && fun2.symbol.isConstructor && (mode & EXPRmode) != 0) {
-                res.tpe = res.tpe.notNull
+              /*
+                if (fun2.hasSymbol && fun2.symbol.isConstructor && (mode & EXPRmode) != 0) {
+                  res.tpe = res.tpe.notNull
+                }
+                */
+                // TODO: In theory we should be able to call:
+                //if (fun2.hasSymbol && fun2.symbol.name == nme.apply && fun2.symbol.owner == ArrayClass) {
+                // But this causes cyclic reference for Array class in Cleanup. It is easy to overcome this
+                // by calling ArrayClass.info here (or some other place before specialize).
+                if (fun2.symbol == Array_apply && !res.isErrorTyped) {
+                  val checked = gen.mkCheckInit(res)
+                  // this check is needed to avoid infinite recursion in Duplicators
+                  // (calling typed1 more than once for the same tree)
+                  if (checked ne res) typed { atPos(tree.pos)(checked) }
+                  else res
+                } else
+                  res
               }
-              */
-              // TODO: In theory we should be able to call:
-              //if (fun2.hasSymbol && fun2.symbol.name == nme.apply && fun2.symbol.owner == ArrayClass) {
-              // But this causes cyclic reference for Array class in Cleanup. It is easy to overcome this
-              // by calling ArrayClass.info here (or some other place before specialize).
-              if (fun2.symbol == Array_apply && !res.isErrorTyped) {
-                val checked = gen.mkCheckInit(res)
-                // this check is needed to avoid infinite recursion in Duplicators
-                // (calling typed1 more than once for the same tree)
-                if (checked ne res) typed { atPos(tree.pos)(checked) }
-                else res
-              } else
-                res
             case SilentTypeError(err) =>
               onError({issue(err); setError(tree)})
           }
@@ -5492,7 +5504,13 @@ trait Typers extends Modes with Adaptations with Tags {
         }
 
         //@M TODO: context.undetparams = undets_fun ?
-        Typer.this.typedTypeApply(tree, mode, fun1, args1)
+        val woot = Typer.this.typedTypeApply(tree, mode, fun1, args1)
+        println("TYPED TYPE APPLY: " + woot)
+        // if (woot.toString == "My.selectDynamic.typeApplyDynamic$macro(ClassTag.apply[T1](null), ClassTag.apply[T2](null))") {
+        //   println(treeInfo.isTypeMacro(woot))
+        //   println(scala.tools.nsc.util.stackTraceString(new Exception))
+        // }
+        woot
       }
 
       def typedApplyDynamic(tree: ApplyDynamic) = {
