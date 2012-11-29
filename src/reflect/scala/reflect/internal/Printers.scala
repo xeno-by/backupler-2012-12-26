@@ -20,7 +20,8 @@ trait Printers extends api.Printers { self: SymbolTable =>
 
   /** Adds backticks if the name is a scala keyword. */
   def quotedName(name: Name, decode: Boolean): String = {
-    val s = if (decode) name.decode else name.toString
+    var s = if (decode) name.decode else name.toString
+    s += (if (name.isTermName) "#E" else "#Y")
     val term = name.toTermName
     if (nme.keywords(term) && term != nme.USCOREkw) "`%s`" format s
     else s

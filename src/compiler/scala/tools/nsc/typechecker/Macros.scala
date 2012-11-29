@@ -209,6 +209,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
   }
 
   private def loadMacroImplBinding(macroDef: Symbol): MacroImplBinding = {
+    println("MACRODEF: " + macroDef)
     val Some(AnnotationInfo(_, List(pickle), _)) = macroDef.getAnnotation(MacroImplAnnotation)
     MacroImplBinding.unpickle(pickle)
   }
@@ -492,6 +493,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     val macroRef = tpt match {
       case Select(qual, _) => Select(qual, macroName)
       case Ident(_) => Ident(macroName)
+      case _ => throw new Exception(showRaw(tpt))
     }
     gen.mkApply(macroRef, targs, argss) setPos tree.pos
   }
