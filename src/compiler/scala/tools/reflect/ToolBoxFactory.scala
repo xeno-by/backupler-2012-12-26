@@ -106,7 +106,11 @@ abstract class ToolBoxFactory[U <: JavaUniverse](val u: U) { factorySelf =>
               tree match {
                 case Ident(_) =>
                   val freeTermRef = Ident(freeTermNames(tree.symbol.asFreeTerm))
-                  if (wrapFreeTermRefs) Apply(freeTermRef, List()) else freeTermRef
+                  val wrapThisOne = wrapFreeTermRefs && (tree.symbol.tpe match {
+                    case MethodType(Nil, _) => false
+                    case _ => true
+                  })
+                  if (wrapThisOne) Apply(freeTermRef, List()) else freeTermRef
                 case _ =>
                   throw new Error("internal error: %s (%s, %s) is not supported".format(tree, tree.productPrefix, tree.getClass))
               }
