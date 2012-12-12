@@ -2100,7 +2100,7 @@ self =>
       t
     }
     def constructorAnnotations(): List[Tree] = readAnnots {
-      atPos(in.offset)(New(exprSimpleType(), List(argumentExprs())))
+      atPos(in.offset)(New(exprSimpleType(), multipleArgumentExprs()))
     }
 
     def annotationExpr(): Tree = atPos(in.offset) {
