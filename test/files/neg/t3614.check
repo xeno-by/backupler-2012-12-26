@@ -1,4 +1,7 @@
 t3614.scala:2: error: class type required but AnyRef{def a: Int} found
   def v = new ({ def a=0 })
                ^
-one error found
+t3614.scala:2: error: only declarations allowed here
+  def v = new ({ def a=0 })
+                     ^
+two errors found
