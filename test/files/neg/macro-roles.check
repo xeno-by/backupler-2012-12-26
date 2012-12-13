@@ -1,0 +1,16 @@
+Test_2.scala:6: error: app = Macros.Foo, role = TYPE_ROLE
+  val x1: Foo = new Foo
+          ^
+Test_2.scala:4: error: app = Foo, role = PARENT_ROLE
+  class D1 extends Foo
+                   ^
+Test_2.scala:5: error: app = Macros.Bar(), role = APPLIED_TYPE_ROLE
+  type T = Bar()[Int]
+           ^
+Test_2.scala:6: error: app = new Foo(), role = NEW_ROLE
+  val x1: Foo = new Foo
+                ^
+Test_2.scala:7: error: app = new Foo(), role = ANNOTATION_ROLE
+  @Foo class D2
+   ^
+5 errors found

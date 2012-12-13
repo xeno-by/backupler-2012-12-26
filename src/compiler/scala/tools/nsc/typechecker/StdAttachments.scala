@@ -14,6 +14,20 @@ trait StdAttachments {
   type MacroContext = UnaffiliatedMacroContext { val universe: self.global.type }
   case class MacroRuntimeAttachment(delayed: Boolean, typerContext: Context, macroContext: Option[MacroContext])
 
+  /** Scratchpad for the macro expander, which is used to store everything except the details about the runtime.
+   */
+  case class MacroExpanderAttachment(original: Tree, role: MacroRole, enclosingTemplate: Tree)
+
+  /** Loads underlying MacroExpanderAttachment from a macro expandee or returns a default value for that attachment.
+   */
+ def macroExpanderAttachment(tree: Tree): MacroExpanderAttachment =
+    tree.attachments.get[MacroExpanderAttachment] getOrElse {
+      tree match {
+        case Apply(fn, _) if tree.isInstanceOf[ApplyToImplicitArgs] => macroExpanderAttachment(fn)
+        case _ => MacroExpanderAttachment(EmptyTree, TERM_ROLE, EmptyTree)
+      }
+    }
+
   /** After being synthesized by the parser, primary constructors aren't fully baked yet.
    *  A call to super in such constructors is just a fill-me-in-later dummy resolved later
    *  by `parentTypes`. This attachment coordinates `parentTypes` and `typedTemplate` and
