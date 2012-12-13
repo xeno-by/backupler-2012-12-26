@@ -7,7 +7,7 @@ object Macros {
     val msg = "I've been created from " + c.macroApplication
     val Block(List(synthetic: ClassDef), _) = reify{ class SomeUniqueName { def hello = c.literal(msg).splice } }.tree
     if (!c.existsAmongTrees(synthetic.name)) c.introduceTopLevel(synthetic)
-    c.Expr[String](Select(Apply(Select(New(Ident(synthetic.name)), nme.CONSTRUCTOR), List()), newTermName("hello")))
+    c.Expr[String](Select(Apply(Select(New(Ident(synthetic.name)), nme.CONSTRUCTOR), List()), TermName("hello")))
   }
 
   def foo = macro impl
