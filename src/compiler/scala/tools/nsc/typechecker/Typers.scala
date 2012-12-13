@@ -878,7 +878,7 @@ trait Typers extends Modes with Adaptations with Tags {
           case Block(_, tree1) => tree1.symbol
           case _               => tree.symbol
         }
-        if (!meth.isConstructor && !meth.isTermMacro && isFunctionType(pt)) { // (4.2)
+        if (!meth.isConstructor && isFunctionType(pt)) { // (4.2)
           debuglog("eta-expanding " + tree + ":" + tree.tpe + " to " + pt)
           checkParamsConvertible(tree, tree.tpe)
           val tree0 = etaExpand(context.unit, tree, this)
@@ -904,7 +904,9 @@ trait Typers extends Modes with Adaptations with Tags {
       }
 
       def adaptType(): Tree = {
-        if (inFunMode(mode)) {
+        if (treeInfo.isMacroApplication(tree) && !isSuppressMacroExpansion(tree)) {
+          macroExpandType(this, tree, mode, pt)
+        } else if (inFunMode(mode)) {
           // todo. the commented line below makes sense for typechecking, say, TypeApply(Ident(`some abstract type symbol`), List(...))
           // because otherwise Ident will have its tpe set to a TypeRef, not to a PolyType, and `typedTypeApply` will fail
           // but this needs additional investigation, because it crashes t5228, gadts1 and maybe something else
@@ -1099,7 +1101,7 @@ trait Typers extends Modes with Adaptations with Tags {
           adaptToImplicitMethod(mt)
 
         case mt: MethodType if (((mode & (EXPRmode | FUNmode | LHSmode)) == EXPRmode) &&
-          (context.undetparams.isEmpty || inPolyMode(mode))) && !(tree.symbol != null && tree.symbol.isTermMacro) =>
+          (context.undetparams.isEmpty || inPolyMode(mode))) && !treeInfo.isMacroApplicationOrBlock(tree) =>
           instantiateToMethodType(mt)
 
         case _ =>
@@ -1118,11 +1120,8 @@ trait Typers extends Modes with Adaptations with Tags {
           }
           if (tree.isType)
             adaptType()
-          else if (
-              inExprModeButNot(mode, FUNmode) && !tree.isDef &&   // typechecking application
-              tree.symbol != null && tree.symbol.isTermMacro &&   // of a macro
-              !tree.attachments.get[SuppressMacroExpansionAttachment.type].isDefined)
-            macroExpand(this, tree, mode, pt)
+          else if (inExprModeButNot(mode, FUNmode) && treeInfo.isMacroApplication(tree) && !isSuppressMacroExpansion(tree))
+            macroExpandTerm(this, tree, mode, pt)
           else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
             adaptConstrPattern()
           else if (shouldInsertApply(tree))
@@ -1539,7 +1538,9 @@ trait Typers extends Modes with Adaptations with Tags {
      *    (3 times from the typer)
      *    <the same three calls>
      */
-    private def typedParentType(encodedtpt: Tree, templ: Template, inMixinPosition: Boolean): Tree = {
+    def typedParentType(encodedtpt: Tree, templ: Template, inMixinPosition: Boolean): Tree = {
+      if (encodedtpt.isErrorTyped) return encodedtpt
+
       val app = treeInfo.dissectApplied(encodedtpt)
       val (treeInfo.Applied(core, targs, argss), decodedtpt) = (app, app.callee)
       val argssAreTrivial = argss == Nil || argss == ListOfNil
@@ -1548,11 +1549,10 @@ trait Typers extends Modes with Adaptations with Tags {
       // we'll have to check the probe for isTypeMacro anyways.
       // therefore I think it's reasonable to trade a more specific "inherits itself" error
       // for a generic, yet understandable "cyclic reference" error
-      var probe = typedTypeConstructor(core.duplicate).tpe.typeSymbol
-      if (probe == null) probe = NoSymbol
-      probe.initialize
-
-      if (probe.isTrait || inMixinPosition) {
+      val (probe, tpt) = probeTypeConstructor(core)
+      if (probe.isMacroType) {
+        macroExpandParent(this, encodedtpt, tpt, targs, argss, templ, inMixinPosition)
+      } else if (probe.isTrait || inMixinPosition) {
         if (!argssAreTrivial) {
           if (probe.isTrait) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
           else () // a class in a mixin position - this warrants an error in `validateParentClasses`
@@ -1616,7 +1616,7 @@ trait Typers extends Modes with Adaptations with Tags {
      *  which encodes the fact that supercall argss are unknown during parsing and need to be transplanted
      *  from one of the parent types. Read more about why the argss are unknown in `tools.nsc.ast.Trees.Template`.
      */
-    private def typedPrimaryConstrBody(templ: Template)(actualSuperCall: => Tree): Tree =
+    def typedPrimaryConstrBody(templ: Template)(actualSuperCall: => Tree): Tree =
       treeInfo.firstConstructor(templ.body) match {
         case ctor @ DefDef(_, _, _, vparamss, _, cbody @ Block(cstats, cunit)) =>
           val (preSuperStats, superCall) = {
@@ -1646,7 +1646,11 @@ trait Typers extends Modes with Adaptations with Tags {
           else
             map2(preSuperStats, preSuperVals)((ldef, gdef) => gdef.tpt.tpe = ldef.symbol.tpe)
 
-          if (superCall1 == cunit) EmptyTree else cbody2
+          if (superCall1 == cunit) EmptyTree
+          else cbody2 match {
+            case Block(_, expr) => expr
+            case tree => tree
+          }
         case _ =>
           EmptyTree
       }
@@ -2286,7 +2290,7 @@ trait Typers extends Modes with Adaptations with Tags {
                meth.owner.isAnonOrRefinementClass))
             InvalidConstructorDefError(ddef)
           typed(ddef.rhs)
-        } else if (meth.isTermMacro) {
+        } else if (meth.isMacro) {
           // typechecking macro bodies is sort of unconventional
           // that's why we employ our custom typing scheme orchestrated outside of the typer
           transformedOr(ddef.rhs, typedMacroBody(this, ddef))
@@ -3208,7 +3212,7 @@ trait Typers extends Modes with Adaptations with Tags {
             val lencmp = compareLengths(args, formals)
 
             def checkNotMacro() = {
-              if (fun.symbol != null && fun.symbol.filter(sym => sym != null && sym.isTermMacro && !sym.isErroneous) != NoSymbol)
+              if (fun.symbol != null && fun.symbol.filter(sym => sym != null && sym.isMacro && !sym.isErroneous) != NoSymbol)
                 tryTupleApply getOrElse duplErrorTree(NamedAndDefaultArgumentsNotSupportedForMacros(tree, fun))
             }
 
@@ -3400,7 +3404,8 @@ trait Typers extends Modes with Adaptations with Tags {
           doTypedUnapply(tree, fun0, fun, args, mode, pt)
 
         case _ =>
-          duplErrorTree(ApplyWithoutArgsError(tree, fun))
+          if (treeInfo.isMacroApplication(tree)) duplErrorTree(MacroTooManyArgumentListsError(tree, fun.symbol))
+          else duplErrorTree(ApplyWithoutArgsError(tree, fun))
       }
     }
 
@@ -3619,6 +3624,10 @@ trait Typers extends Modes with Adaptations with Tags {
 
       val res = if (fun.isErroneous) ErroneousAnnotation
       else {
+        val treeInfo.Applied(Select(New(core), nme.CONSTRUCTOR), targs, _) = fun
+        val (probe, macrotpt) = probeTypeConstructor(core)
+        if (probe.isMacroType) return macroExpandAnnotation(this, ann, macrotpt, targs, argss, mode, selfsym, annClass, requireJava)
+
         val typedFun @ Select(New(tpt), _) = typed(fun, forFunMode(mode), WildcardType)
         val annType = tpt.tpe
 
@@ -4633,27 +4642,37 @@ trait Typers extends Modes with Adaptations with Tags {
           case Block(stats, expr) =>
             typed1(atPos(tree.pos)(Block(stats, Apply(expr, args) setPos tree.pos.makeTransparent)), mode, pt)
           case _ =>
-            normalTypedApply(tree, fun, args) match {
-              case Apply(Select(New(tpt), name), args)
-              if (tpt.tpe != null &&
-                tpt.tpe.typeSymbol == ArrayClass &&
-                args.length == 1 &&
-                erasure.GenericArray.unapply(tpt.tpe).isDefined) => // !!! todo simplify by using extractor
-                // convert new Array[T](len) to evidence[ClassTag[T]].newArray(len)
-                // convert new Array^N[T](len) for N > 1 to evidence[ClassTag[Array[...Array[T]...]]].newArray(len), where Array HK gets applied (N-1) times
-                // [Eugene] no more MaxArrayDims. ClassTags are flexible enough to allow creation of arrays of arbitrary dimensionality (w.r.t JVM restrictions)
-                val Some((level, componentType)) = erasure.GenericArray.unapply(tpt.tpe)
-                val tagType = List.iterate(componentType, level)(tpe => appliedType(ArrayClass.toTypeConstructor, List(tpe))).last
-                val newArrayApp = atPos(tree.pos) {
-                  val tag = resolveClassTag(tree.pos, tagType)
-                  if (tag.isEmpty) MissingClassTagError(tree, tagType)
-                  else new ApplyToImplicitArgs(Select(tag, nme.newArray), args)
-                }
-                typed(newArrayApp, mode, pt)
-              case Apply(Select(fun, nme.apply), _) if treeInfo.isSuperConstrCall(fun) => //SI-5696
-                TooManyArgumentListsForConstructor(tree)
-              case tree1 =>
-                tree1
+            def vanillaTypecheck() = {
+              normalTypedApply(tree, fun, args) match {
+                case Apply(Select(New(tpt), name), args)
+                if (tpt.tpe != null &&
+                  tpt.tpe.typeSymbol == ArrayClass &&
+                  args.length == 1 &&
+                  erasure.GenericArray.unapply(tpt.tpe).isDefined) => // !!! todo simplify by using extractor
+                  // convert new Array[T](len) to evidence[ClassTag[T]].newArray(len)
+                  // convert new Array^N[T](len) for N > 1 to evidence[ClassTag[Array[...Array[T]...]]].newArray(len), where Array HK gets applied (N-1) times
+                  // [Eugene] no more MaxArrayDims. ClassTags are flexible enough to allow creation of arrays of arbitrary dimensionality (w.r.t JVM restrictions)
+                  val Some((level, componentType)) = erasure.GenericArray.unapply(tpt.tpe)
+                  val tagType = List.iterate(componentType, level)(tpe => appliedType(ArrayClass.toTypeConstructor, List(tpe))).last
+                  val newArrayApp = atPos(tree.pos) {
+                    val tag = resolveClassTag(tree.pos, tagType)
+                    if (tag.isEmpty) MissingClassTagError(tree, tagType)
+                    else new ApplyToImplicitArgs(Select(tag, nme.newArray), args)
+                  }
+                  typed(newArrayApp, mode, pt)
+                case Apply(Select(fun, nme.apply), _) if treeInfo.isSuperConstrCall(fun) => //SI-5696
+                  TooManyArgumentListsForConstructor(tree)
+                case tree1 =>
+                  tree1
+              }
+            }
+            tree match {
+              case treeInfo.Applied(Select(New(core), nme.CONSTRUCTOR), targs, argss) =>
+                val (probe, tpt) = probeTypeConstructor(core)
+                if (probe.isMacroType) macroExpandNew(this, tree, tpt, targs, argss, mode)
+                else vanillaTypecheck()
+              case _ =>
+                vanillaTypecheck()
             }
         }
       }
@@ -5194,16 +5213,21 @@ trait Typers extends Modes with Adaptations with Tags {
         val tpt = tree.tpt
         val args = tree.args
         val tpt1 = typed1(tpt, mode | FUNmode | TAPPmode, WildcardType)
-        if (tpt1.isErrorTyped) {
-          tpt1
-        } else if (!tpt1.hasSymbol) {
-          AppliedTypeNoParametersError(tree, tpt1.tpe)
+        // this check is necessary to correctly process such exotic constructs as `TM(2)[Int]`
+        // which means "take the type macro TM, expand it with argss = 2 and then apply the result to Int"
+        val tpt2 = if (treeInfo.isNonTrivialMacroApplication(tpt1)) macroExpandAppliedType(this, tpt1, mode) else tpt1
+        if (tpt2.isErrorTyped) {
+          tpt2
+        } else if (!tpt2.hasSymbol) {
+          AppliedTypeNoParametersError(tree, tpt2.tpe)
+        } else if (tpt2.symbol.isMacroType) {
+          atPos(tree.pos)(gen.mkTypeLevelApply(tpt2, targs = args, argss = Nil))
         } else {
-          val tparams = tpt1.symbol.typeParams
+          val tparams = tpt2.symbol.typeParams
           if (sameLength(tparams, args)) {
             // @M: kind-arity checking is done here and in adapt, full kind-checking is in checkKindBounds (in Infer)
             val args1 =
-              if (!tpt1.symbol.rawInfo.isComplete)
+              if (!tpt2.symbol.rawInfo.isComplete)
                 args mapConserve (typedHigherKindedType(_, mode))
                 // if symbol hasn't been fully loaded, can't check kind-arity
               else map2Conserve(args, tparams) { (arg, tparam) =>
@@ -5222,24 +5246,33 @@ trait Typers extends Modes with Adaptations with Tags {
                       glb(List(arg.symbol.info.bounds.hi, tparam.info.bounds.hi.subst(tparams, argtypes))))
               case _ =>
             })
-            val original = treeCopy.AppliedTypeTree(tree, tpt1, args1)
-            val result = TypeTree(appliedType(tpt1.tpe, argtypes)) setOriginal original
-            if(tpt1.tpe.isInstanceOf[PolyType]) // did the type application (performed by appliedType) involve an unchecked beta-reduction?
+            val original = treeCopy.AppliedTypeTree(tree, tpt2, args1)
+            val result = TypeTree(appliedType(tpt2.tpe, argtypes)) setOriginal original
+            if(tpt2.tpe.isInstanceOf[PolyType]) // did the type application (performed by appliedType) involve an unchecked beta-reduction?
               TypeTreeWithDeferredRefCheck(){ () =>
                 // wrap the tree and include the bounds check -- refchecks will perform this check (that the beta reduction was indeed allowed) and unwrap
                 // we can't simply use original in refchecks because it does not contains types
                 // (and the only typed trees we have have been mangled so they're not quite the original tree anymore)
-                checkBounds(result, tpt1.tpe.prefix, tpt1.symbol.owner, tpt1.symbol.typeParams, argtypes, "")
+                checkBounds(result, tpt2.tpe.prefix, tpt2.symbol.owner, tpt2.symbol.typeParams, argtypes, "")
                 result // you only get to see the wrapped tree after running this check :-p
               } setType (result.tpe) setPos(result.pos)
             else result
           } else if (tparams.isEmpty) {
-            AppliedTypeNoParametersError(tree, tpt1.tpe)
+            AppliedTypeNoParametersError(tree, tpt2.tpe)
           } else {
-            //Console.println("\{tpt1}:\{tpt1.symbol}:\{tpt1.symbol.info}")
-            if (settings.debug.value) Console.println(tpt1+":"+tpt1.symbol+":"+tpt1.symbol.info)//debug
-            AppliedTypeWrongNumberOfArgsError(tree, tpt1, tparams)
+            //Console.println("\{tpt2}:\{tpt2.symbol}:\{tpt2.symbol.info}")
+            if (settings.debug.value) Console.println(tpt2+":"+tpt2.symbol+":"+tpt2.symbol.info)//debug
+            AppliedTypeWrongNumberOfArgsError(tree, tpt2, tparams)
           }
+        }
+      }
+
+      def typedDependentTypeTree(tree: DependentTypeTree) = {
+        val treeInfo.Applied(tpt, targs, argss) = tree
+        typed1(tpt, mode | FUNmode, WildcardType) match {
+          case tpt1 if tpt1.isErrorTyped => tpt1
+          case tpt1 if !tpt1.symbol.isMacroType => DependentTypeNoParametersError(tree, tpt1.tpe)
+          case tpt1 => atPos(tree.pos)(gen.mkTypeLevelApply(tpt1, targs, argss))
         }
       }
 
@@ -5340,9 +5373,9 @@ trait Typers extends Modes with Adaptations with Tags {
             // that typecheck must not trigger macro expansions, so we explicitly prohibit them
             // however we cannot do `context.withMacrosDisabled`
             // because `expr` might contain nested macro calls (see SI-6673)
-            val exprTyped = typed1(expr updateAttachment SuppressMacroExpansionAttachment, mode, pt)
+            val exprTyped = typed1(suppressMacroExpansion(expr), mode, pt)
             exprTyped match {
-              case macroDef if macroDef.symbol != null && macroDef.symbol.isTermMacro && !macroDef.symbol.isErroneous =>
+              case macroDef if treeInfo.isMacroApplication(macroDef) && !macroDef.symbol.isErroneous =>
                 MacroEtaError(exprTyped)
               case _ =>
                 typedEta(checkDead(exprTyped))
@@ -5520,6 +5553,7 @@ trait Typers extends Modes with Adaptations with Tags {
         case tree: If                           => typedIf(tree)
         case tree: TypeApply                    => typedTypeApply(tree)
         case tree: AppliedTypeTree              => typedAppliedTypeTree(tree)
+        case tree: DependentTypeTree            => typedDependentTypeTree(tree)
         case tree: Bind                         => typedBind(tree)
         case tree: Function                     => typedFunction(tree)
         case tree: Match                        => typedVirtualizedMatch(tree)
@@ -5747,9 +5781,16 @@ trait Typers extends Modes with Adaptations with Tags {
 
     def typedTypeConstructor(tree: Tree): Tree = typedTypeConstructor(tree, NOmode)
 
+    def probeTypeConstructor(tree: Tree): (Symbol, Tree) = {
+      val tpt = typedTypeConstructor(suppressMacroExpansion(tree.duplicate))
+      var probe = tpt.tpe.typeSymbol
+      if (probe == null) probe = NoSymbol
+      (probe.initialize, tpt)
+    }
+
     def computeType(tree: Tree, pt: Type): Type = {
       // macros employ different logic of `computeType`
-      assert(!context.owner.isTermMacro, context.owner)
+      assert(!context.owner.isMacro, context.owner)
       val tree1 = typed(tree, pt)
       transformed(tree) = tree1
       val tpe = packedType(tree1, context.owner)
@@ -5758,8 +5799,8 @@ trait Typers extends Modes with Adaptations with Tags {
     }
 
     def computeMacroDefType(tree: Tree, pt: Type): Type = {
-      assert(context.owner.isTermMacro, context.owner)
-      assert(tree.symbol.isTermMacro, tree.symbol)
+      assert(context.owner.isMacro, context.owner)
+      assert(tree.symbol.isMacro, tree.symbol)
       assert(tree.isInstanceOf[DefDef], tree.getClass)
       val ddef = tree.asInstanceOf[DefDef]
 

@@ -394,6 +394,14 @@ trait Trees extends api.Trees { self: SymbolTable =>
 
   case class Apply(fun: Tree, args: List[Tree])
        extends GenericApply with ApplyApi {
+
+    // assert(fun.isTerm, fun)
+    // cannot uncomment this assert, because Apply can represent both term-level and type-level applications
+    // in cases when templates are involved, e.g. `class C extends B(2)` or `@annot(2)`, applications
+    // might be either term-level (call of a constructor) or type-level (type macro application)
+    // in parser, when we first encounter this ambiguity, we don't have enough information to tell those use cases apart
+    // therefore we encode such applications using Apply and figure out the rest later
+
     override def symbol: Symbol = fun.symbol
     override def symbol_=(sym: Symbol) { fun.symbol = sym }
   }
@@ -477,6 +485,16 @@ trait Trees extends api.Trees { self: SymbolTable =>
     override def symbol_=(sym: Symbol) { tpt.symbol = sym }
   }
   object AppliedTypeTree extends AppliedTypeTreeExtractor
+
+  case class DependentTypeTree(tpt: Tree, args: List[Tree])
+       extends TypTree with DependentTypeTreeApi {
+
+    assert(tpt.isType, tpt)
+
+    override def symbol: Symbol = tpt.symbol
+    override def symbol_=(sym: Symbol) { tpt.symbol = sym }
+  }
+  object DependentTypeTree extends DependentTypeTreeExtractor
 
   case class TypeBoundsTree(lo: Tree, hi: Tree)
        extends TypTree with TypeBoundsTreeApi
@@ -621,6 +639,8 @@ trait Trees extends api.Trees { self: SymbolTable =>
       new CompoundTypeTree(templ).copyAttrs(tree)
     def AppliedTypeTree(tree: Tree, tpt: Tree, args: List[Tree]) =
       new AppliedTypeTree(tpt, args).copyAttrs(tree)
+    def DependentTypeTree(tree: Tree, tpt: Tree, args: List[Tree]) =
+      new DependentTypeTree(tpt, args).copyAttrs(tree)
     def TypeBoundsTree(tree: Tree, lo: Tree, hi: Tree) =
       new TypeBoundsTree(lo, hi).copyAttrs(tree)
     def ExistentialTypeTree(tree: Tree, tpt: Tree, whereClauses: List[Tree]) =
@@ -833,6 +853,11 @@ trait Trees extends api.Trees { self: SymbolTable =>
       case t @ AppliedTypeTree(tpt0, args0)
       if (tpt0 == tpt) && (args0 == args) => t
       case _ => treeCopy.AppliedTypeTree(tree, tpt, args)
+    }
+    def DependentTypeTree(tree: Tree, tpt: Tree, args: List[Tree]) = tree match {
+      case t @ DependentTypeTree(tpt0, args0)
+      if (tpt0 == tpt) && (args0 == args) => t
+      case _ => treeCopy.DependentTypeTree(tree, tpt, args)
     }
     def TypeBoundsTree(tree: Tree, lo: Tree, hi: Tree) = tree match {
       case t @ TypeBoundsTree(lo0, hi0)
@@ -1188,6 +1213,8 @@ trait Trees extends api.Trees { self: SymbolTable =>
         traverse(templ)
       case AppliedTypeTree(tpt, args) =>
         traverse(tpt); traverseTrees(args)
+      case DependentTypeTree(tpt, args) =>
+        traverse(tpt); traverseTrees(args)
       case TypeBoundsTree(lo, hi) =>
         traverse(lo); traverse(hi)
       case ExistentialTypeTree(tpt, whereClauses) =>
@@ -1236,6 +1263,8 @@ trait Trees extends api.Trees { self: SymbolTable =>
         treeCopy.TypeApply(tree, transform(fun), transformTrees(args))
       case AppliedTypeTree(tpt, args) =>
         treeCopy.AppliedTypeTree(tree, transform(tpt), transformTrees(args))
+      case DependentTypeTree(tpt, args) =>
+        treeCopy.DependentTypeTree(tree, transform(tpt), transformTrees(args))
       case Bind(name, body) =>
         treeCopy.Bind(tree, name, transform(body))
       case Function(vparams, body) =>
@@ -1647,6 +1676,7 @@ trait Trees extends api.Trees { self: SymbolTable =>
   implicit val SelectFromTypeTreeTag = ClassTag[SelectFromTypeTree](classOf[SelectFromTypeTree])
   implicit val CompoundTypeTreeTag = ClassTag[CompoundTypeTree](classOf[CompoundTypeTree])
   implicit val AppliedTypeTreeTag = ClassTag[AppliedTypeTree](classOf[AppliedTypeTree])
+  implicit val DependentTypeTreeTag = ClassTag[DependentTypeTree](classOf[DependentTypeTree])
   implicit val TypeBoundsTreeTag = ClassTag[TypeBoundsTree](classOf[TypeBoundsTree])
   implicit val ExistentialTypeTreeTag = ClassTag[ExistentialTypeTree](classOf[ExistentialTypeTree])
   implicit val TypeTreeTag = ClassTag[TypeTree](classOf[TypeTree])

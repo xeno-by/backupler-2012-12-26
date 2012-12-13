@@ -42,4 +42,28 @@ trait StdAttachments {
    *  (but think thrice before using that API - see the discussion at https://github.com/scala/scala/pull/1639).
    */
   case object SuppressMacroExpansionAttachment
+
+  /** Suppresses macro expansion of the tree by putting SuppressMacroExpansionAttachment on it.
+   */
+  def suppressMacroExpansion(tree: Tree) = tree.updateAttachment(SuppressMacroExpansionAttachment)
+
+  /** Unsuppresses macro expansion of the tree by removing SuppressMacroExpansionAttachment from it and its children.
+   */
+  def unsuppressMacroExpansion(tree: Tree): Tree = {
+    tree.removeAttachment[SuppressMacroExpansionAttachment.type]
+    tree match {
+      case Apply(fn, _) if tree.isInstanceOf[ApplyToImplicitArgs] => unsuppressMacroExpansion(fn)
+      case _ => // do nothing
+    }
+    tree
+  }
+
+  /** Determines whether a tree should not be expanded, because someone has put SuppressMacroExpansionAttachment on it or one of its children.
+   */
+  def isSuppressMacroExpansion(tree: Tree): Boolean =
+    if (tree.attachments.get[SuppressMacroExpansionAttachment.type].isDefined) true
+    else tree match {
+      case Apply(fn, _) if tree.isInstanceOf[ApplyToImplicitArgs] => isSuppressMacroExpansion(fn)
+      case _ => false
+    }
 }

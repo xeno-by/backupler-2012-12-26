@@ -185,6 +185,11 @@ abstract class TreeGen extends macros.TreeBuilder {
     }
   }
 
+  def mkApply(fun: Tree, argss: List[List[Tree]]): Tree =
+    (fun /: argss)(Apply.apply)
+  def mkApply(fun: Tree, targs: List[Tree], argss: List[List[Tree]]): Tree =
+    mkApply(mkTypeApply(fun, targs), argss)
+
   /** Builds a type application node if args.nonEmpty, returns fun otherwise. */
   def mkTypeApply(fun: Tree, targs: List[Tree]): Tree =
     if (targs.isEmpty) fun else TypeApply(fun, targs)
@@ -199,6 +204,11 @@ abstract class TreeGen extends macros.TreeBuilder {
   }
   private def typeTestSymbol(any: Boolean) = if (any) Any_isInstanceOf else Object_isInstanceOf
   private def typeCastSymbol(any: Boolean) = if (any) Any_asInstanceOf else Object_asInstanceOf
+
+  def mkTypeLevelApply(tpt: Tree, targs: List[Tree], argss: List[List[Tree]]): Tree = {
+    val tapp = if (targs.isEmpty) tpt else AppliedTypeTree(tpt, targs)
+    (tapp /: argss)(DependentTypeTree.apply)
+  }
 
   /** Builds an instance test with given value and type. */
   def mkIsInstanceOf(value: Tree, tpe: Type, any: Boolean = true, wrapInApply: Boolean = true): Tree =
