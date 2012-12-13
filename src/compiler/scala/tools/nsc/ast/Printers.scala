@@ -238,6 +238,7 @@ trait Printers extends scala.reflect.internal.Printers { this: Global =>
 
       // eliminated by uncurry
       case AppliedTypeTree(tpt, args) =>
+      case DependentTypeTree(tpt, args) =>
       case CompoundTypeTree(templ) =>
       case ExistentialTypeTree(tpt, whereClauses) =>
       case SelectFromTypeTree(qual, selector) =>
