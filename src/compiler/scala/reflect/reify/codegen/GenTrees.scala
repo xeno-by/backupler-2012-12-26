@@ -165,11 +165,13 @@ trait GenTrees {
     }
   }
 
-  private def reifyBoundType(tree: Tree): Tree = {
+  private def reifyBoundType(tree: RefTree): Tree = {
     val sym = tree.symbol
     val tpe = tree.tpe
 
-    def reifyBoundType(tree: Tree): Tree = {
+    if (reifyDebug) println(s"tree: ${global.showRaw(tree)}")
+
+    def reifyBoundType(tree: RefTree): Tree = {
       assert(tpe != null, "unexpected: bound type that doesn't have a tpe: " + showRaw(tree))
 
       // if a symbol or a type of the scrutinee are local to reifee
@@ -198,13 +200,37 @@ trait GenTrees {
               mirrorBuildCall(nme.TypeTree, spliced)
           }
         }
-        else if (sym.isLocatable) {
-          if (reifyDebug) println("tpe is locatable: reify as Ident(%s)".format(sym))
-          mirrorBuildCall(nme.Ident, reify(sym))
-        }
-        else {
-          if (reifyDebug) println("tpe is not locatable: reify as TypeTree(%s)".format(tpe))
-          mirrorBuildCall(nme.TypeTree, reify(tpe))
+        else tree match {
+          case Select(qual @ This(n), name) =>
+            if (reifyDebug)	println(s"reifying Select(This($n), $name)")
+            val res = mirrorCall(nme.Select, mirrorBuildCall(nme.This, reify(qual.symbol)), reify(name))
+            if (reifyDebug) println(s"result: $res")
+            res
+          case Select(qual, name) if qual.isTerm && qual.symbol != definitions.PredefModule =>
+            if (reifyDebug) println(s"qualifier is a term: reify as Select($qual, $name)")
+            val res = mirrorCall(nme.Select, reify(qual), reify(name))
+            if (reifyDebug) println(s"result: $res")
+            res
+          case Select(qual, name) if qual.isType =>
+            if (reifyDebug) println(s"qualifier is a type: reify as SelectFromTypeTree($qual, $name)")
+            val res = mirrorCall(nme.SelectFromTypeTree, reify(qual), reify(name))
+            if (reifyDebug) println(s"result: $res")
+            res
+          case SelectFromTypeTree(qual, name) =>
+            if (reifyDebug) println(s"reify as is: SelectFromTypeTree($qual, $name)")
+            val res = mirrorCall(nme.SelectFromTypeTree, reify(qual), reify(name))
+            if (reifyDebug) println(s"result: $res")
+            res
+          case _ if sym.isLocatable =>
+            if (reifyDebug) println("tpe is locatable: reify as Ident(%s)".format(sym))
+            val res = mirrorBuildCall(nme.Ident, reify(sym))
+            if (reifyDebug) println(s"result: $res")
+            res
+          case _ =>
+            if (reifyDebug) println("tpe is not locatable: reify as TypeTree(%s)".format(tpe))
+            val res = mirrorBuildCall(nme.TypeTree, reify(tpe))
+            if (reifyDebug) println(s"result: $res")
+            res
         }
       }
     }
