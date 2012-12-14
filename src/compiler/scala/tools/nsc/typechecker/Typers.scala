@@ -5228,7 +5228,7 @@ trait Typers extends Modes with Adaptations with Tags {
         } else if (!tpt2.hasSymbol) {
           AppliedTypeNoParametersError(tree, tpt2.tpe)
         } else if (tpt2.symbol.isMacroType) {
-          atPos(tree.pos)(gen.mkTypeLevelApply(tpt2, targs = args, argss = Nil))
+          treeCopy.AppliedTypeTree(tree, tpt2, args) // do nothing here - macros in type roles are expanded in adaptType
         } else {
           val tparams = tpt2.symbol.typeParams
           if (sameLength(tparams, args)) {
@@ -5275,11 +5275,20 @@ trait Typers extends Modes with Adaptations with Tags {
       }
 
       def typedDependentTypeTree(tree: DependentTypeTree) = {
-        val treeInfo.Applied(tpt, targs, argss) = tree
+        val treeInfo.Applied(tpt, _, _) = tree
         typed1(tpt, mode | FUNmode, WildcardType) match {
           case tpt1 if tpt1.isErrorTyped => tpt1
           case tpt1 if !tpt1.symbol.isMacroType => DependentTypeNoParametersError(tree, tpt1.tpe)
-          case tpt1 => atPos(tree.pos)(gen.mkTypeLevelApply(tpt1, targs, argss))
+          case tpt1 =>
+            // important: carefully propagate attributes and attachments
+            object reassembler extends Transformer {
+              override def transform(tree: Tree): Tree = tree match {
+                case DependentTypeTree(DependentTypeTree(_, _), _) => super.transform(tree)
+                case DependentTypeTree(AppliedTypeTree(_, _), _) => super.transform(tree)
+                case DependentTypeTree(tpt, args) => treeCopy.DependentTypeTree(tree, tpt1, args)
+              }
+            }
+            reassembler.transform(tree) // do nothing else here - macros in type roles are expanded in adaptType
         }
       }
 
