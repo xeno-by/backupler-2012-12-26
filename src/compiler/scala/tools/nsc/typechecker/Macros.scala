@@ -750,14 +750,13 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       val start = if (Statistics.canEnable) Statistics.startTimer(macroExpandNanos) else null
       if (Statistics.canEnable) Statistics.incCounter(macroExpandCount)
       try {
-        val metadata = MacroExpanderAttachment(expandee, role, template)
-        expandee.updateAttachment(metadata)
-        desugared.updateAttachment(metadata)
+        linkExpandeeAndDesugared(expandee, desugared, role, template)
         macroExpand1(typer, desugared) match {
           case Success(expanded) =>
             if (allowExpanded(expanded)) {
-              val result = try onSuccess(expanded) finally popMacroContext()
-              if (allowResult(result)) result else onFailure(expanded)
+              val expanded1 = try onSuccess(expanded) finally popMacroContext()
+              if (!hasMacroExpansionAttachment(expanded1)) linkExpandeeAndExpanded(expandee, expanded1)
+              if (allowResult(expanded1)) expanded1 else onFailure(expanded)
             } else {
               typer.TyperErrorGen.MacroInvalidExpansionError(expandee, roleNames(role), allowedExpansions)
               onFailure(expanded)
@@ -779,6 +778,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
                  extends MacroExpander[Result](role, typer, original) {
     def isTypeLike: Boolean = false
     def isParentLike: Boolean = false
+    def isTemplateLike: Boolean = false
 
     override def allowExpandee(expandee: Tree) =
       if (isTypeLike) expandee.isType
@@ -787,11 +787,13 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     override def allowedExpansions =
       if (isTypeLike) "Ident, Select, TypTrees except for TypeBoundsTree, and their Annotated versions"
       else if (isParentLike) "Apply, Ident, Select, class type TypTrees, and their Annotated versions"
-      else abort("the expander should either be type-like or parent-like")
+      else if (isTemplateLike) "Template, Apply, Ident, Select, class type TypTrees, and their Annotated versions"
+      else abort("the expander should either be type-like, parent-like or template-like")
 
     override def allowExpanded(expanded: Tree): Boolean = expanded match {
-      case Apply(_, _) => isParentLike
-      case Annotated(_, Apply(_, _)) => isParentLike
+      case Template(_, _, _) => isTemplateLike
+      case Apply(_, _) => isTemplateLike || isParentLike
+      case Annotated(_, Apply(_, _)) => isTemplateLike || isParentLike
       case Ident(_) => true
       case Select(_, _) => true
       case Annotated(_, annottee) => allowExpanded(annottee)
@@ -904,13 +906,21 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
    */
   def macroExpandParent(typer: Typer, original: Tree, tpt: Tree, targs: List[Tree], argss: List[List[Tree]], templ: Template, inMixinPosition: Boolean) = {
     object expander extends MacroTypeExpander[Tree](PARENT_ROLE, typer, original, tpt, targs, argss) {
-      override def isParentLike = true
+      override def isTemplateLike = true
       override def template = templ
       override def prepare(desugared: Tree) = {
         val desugared1 = typer.typedPrimaryConstrBody(templ)(suppressMacroExpansion(desugared))
         unsuppressMacroExpansion(desugared1)
       }
-      override def onSuccess(expanded: Tree) = typer.typedParentType(expanded, templ, inMixinPosition)
+      override def onSuccess(expanded: Tree) = {
+        val expanded1 = expanded match {
+          // AnyRef emitted here is just a dummy that let's the compiler know
+          // that the namer needs to replace the template being typechecked
+          case templ1 @ Template(_, _, _) => Ident(AnyRefClass) updateAttachment MacroExpansionAttachment(original, expanded)
+          case _ => expanded
+        }
+        typer.typedParentType(expanded1, templ, inMixinPosition)
+      }
       override def allowResult(result: Tree) = allowResultTree(result)
     }
     expander(original)
@@ -927,6 +937,8 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     // therefore we need to undo that hack here or otherwise nullary type macros won't be usable in new role
     val argss1 = if (argss == ListOfNil) Nil else argss
     object expander extends MacroTypeExpander[Tree](NEW_ROLE, typer, original, tpt, targs, argss1) {
+      // TODO: make type macros expanding in new role to behave template-like
+      // it kind of makes sense to e.g. let `new TM` expand into `new C { def x = 2 }`
       override def isParentLike = true
       override def prepare(desugared: Tree) = typer.typed1(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typed(repackApplyAsNew(expanded), mode, WildcardType)
@@ -1013,7 +1025,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
             macroLogLite("" + expanded + "\n" + showRaw(expanded))
             val freeSyms = expanded.freeTerms ++ expanded.freeTypes
             freeSyms foreach (sym => MacroFreeSymbolError(expandee, sym))
-            Success(atPos(enclosingMacroPosition.focus)(expanded updateAttachment MacroExpansionAttachment(expandee)))
+            Success(atPos(enclosingMacroPosition.focus)(expanded))
           }
           expanded match {
             case expanded: Expr[_] if expandee.symbol.isTermMacro => validateResultingTree(expanded.tree)

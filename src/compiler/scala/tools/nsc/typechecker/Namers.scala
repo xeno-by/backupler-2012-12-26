@@ -888,54 +888,60 @@ trait Namers extends MethodSynthesis {
     }
 
     private def templateSig(templ: Template): Type = {
-      val clazz = context.owner
-      def checkParent(tpt: Tree): Type = {
-        if (tpt.tpe.isError) AnyRefClass.tpe
-        else tpt.tpe
+      // when a parent type happens to be a macro type which expands into a template
+      // macro engine will return Ident(AnyRefClass) with an attachment carrying the actual expansion
+      // here we detect this situation and replace the original template with a new one
+      val parentTrees = typer.typedParentTypes(templ)
+      val expansions = flatCollect(parentTrees) { case ExpandedIntoTemplate(templ1) => Some(templ1) }
+      expansions match {
+        case templ1 :: _ =>
+          linkExpandeeAndExpanded(templ, templ1)
+          templateSig(templ1)
+        case _ =>
+          val parents = parentTrees map (_.tpe) map (tpe => if (tpe.isError) AnyRefClass.tpe else tpe)
+
+          enterSelf(templ.self)
+
+          val clazz = context.owner
+          val decls = newScope
+          val templateNamer = newNamer(context.make(templ, clazz, decls))
+          templateNamer enterSyms templ.body
+
+          // add apply and unapply methods to companion objects of case classes,
+          // unless they exist already; here, "clazz" is the module class
+          if (clazz.isModuleClass) {
+            clazz.attachments.get[ClassForCaseCompanionAttachment] foreach { cma =>
+              val cdef = cma.caseClass
+              assert(cdef.mods.isCase, "expected case class: "+ cdef)
+              addApplyUnapply(cdef, templateNamer)
+            }
+          }
+
+          // add the copy method to case classes; this needs to be done here, not in SyntheticMethods, because
+          // the namer phase must traverse this copy method to create default getters for its parameters.
+          // here, clazz is the ClassSymbol of the case class (not the module). (!clazz.hasModuleFlag) excludes
+          // the moduleClass symbol of the companion object when the companion is a "case object".
+          if (clazz.isCaseClass && !clazz.hasModuleFlag) {
+            val modClass = companionSymbolOf(clazz, context).moduleClass
+            modClass.attachments.get[ClassForCaseCompanionAttachment] foreach { cma =>
+              val cdef = cma.caseClass
+              def hasCopy(decls: Scope) = (decls lookup nme.copy) != NoSymbol
+              // SI-5956 needs (cdef.symbol == clazz): there can be multiple class symbols with the same name
+              if (cdef.symbol == clazz && !hasCopy(decls) &&
+                      !parents.exists(p => hasCopy(p.typeSymbol.info.decls)) &&
+                      !parents.flatMap(_.baseClasses).distinct.exists(bc => hasCopy(bc.info.decls)))
+                addCopyMethod(cdef, templateNamer)
+            }
+          }
+
+          // if default getters (for constructor defaults) need to be added to that module, here's the namer
+          // to use. clazz is the ModuleClass. sourceModule works also for classes defined in methods.
+          val module = clazz.sourceModule
+          for (cda <- module.attachments.get[ConstructorDefaultsAttachment]) {
+            cda.companionModuleClassNamer = templateNamer
+          }
+          ClassInfoType(parents, decls, clazz)
       }
-
-      val parents = typer.parentTypes(templ) map checkParent
-
-      enterSelf(templ.self)
-
-      val decls = newScope
-      val templateNamer = newNamer(context.make(templ, clazz, decls))
-      templateNamer enterSyms templ.body
-
-      // add apply and unapply methods to companion objects of case classes,
-      // unless they exist already; here, "clazz" is the module class
-      if (clazz.isModuleClass) {
-        clazz.attachments.get[ClassForCaseCompanionAttachment] foreach { cma =>
-          val cdef = cma.caseClass
-          assert(cdef.mods.isCase, "expected case class: "+ cdef)
-          addApplyUnapply(cdef, templateNamer)
-        }
-      }
-
-      // add the copy method to case classes; this needs to be done here, not in SyntheticMethods, because
-      // the namer phase must traverse this copy method to create default getters for its parameters.
-      // here, clazz is the ClassSymbol of the case class (not the module). (!clazz.hasModuleFlag) excludes
-      // the moduleClass symbol of the companion object when the companion is a "case object".
-      if (clazz.isCaseClass && !clazz.hasModuleFlag) {
-        val modClass = companionSymbolOf(clazz, context).moduleClass
-        modClass.attachments.get[ClassForCaseCompanionAttachment] foreach { cma =>
-          val cdef = cma.caseClass
-          def hasCopy(decls: Scope) = (decls lookup nme.copy) != NoSymbol
-          // SI-5956 needs (cdef.symbol == clazz): there can be multiple class symbols with the same name
-          if (cdef.symbol == clazz && !hasCopy(decls) &&
-                  !parents.exists(p => hasCopy(p.typeSymbol.info.decls)) &&
-                  !parents.flatMap(_.baseClasses).distinct.exists(bc => hasCopy(bc.info.decls)))
-            addCopyMethod(cdef, templateNamer)
-        }
-      }
-
-      // if default getters (for constructor defaults) need to be added to that module, here's the namer
-      // to use. clazz is the ModuleClass. sourceModule works also for classes defined in methods.
-      val module = clazz.sourceModule
-      for (cda <- module.attachments.get[ConstructorDefaultsAttachment]) {
-        cda.companionModuleClassNamer = templateNamer
-      }
-      ClassInfoType(parents, decls, clazz)
     }
 
     private def classSig(tparams: List[TypeDef], impl: Template): Type = {

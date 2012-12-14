@@ -904,7 +904,7 @@ trait Typers extends Modes with Adaptations with Tags {
       }
 
       def adaptType(): Tree = {
-        if (treeInfo.isMacroApplication(tree) && !isSuppressMacroExpansion(tree)) {
+        if (treeInfo.isMacroApplication(tree) && !isMacroExpansionSuppressed(tree)) {
           macroExpandType(this, tree, mode, pt)
         } else if (inFunMode(mode)) {
           // todo. the commented line below makes sense for typechecking, say, TypeApply(Ident(`some abstract type symbol`), List(...))
@@ -1120,7 +1120,7 @@ trait Typers extends Modes with Adaptations with Tags {
           }
           if (tree.isType)
             adaptType()
-          else if (inExprModeButNot(mode, FUNmode) && treeInfo.isMacroApplication(tree) && !isSuppressMacroExpansion(tree))
+          else if (inExprModeButNot(mode, FUNmode) && treeInfo.isMacroApplication(tree) && !isMacroExpansionSuppressed(tree))
             macroExpandTerm(this, tree, mode, pt)
           else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
             adaptConstrPattern()
@@ -1693,10 +1693,13 @@ trait Typers extends Modes with Adaptations with Tags {
         )
     }
 
-    def parentTypes(templ: Template): List[Tree] = templ.parents match {
+    def typedParentTypes(templ: Template): List[Tree] = templ.parents match {
       case Nil => List(atPos(templ.pos)(TypeTree(AnyRefClass.tpe)))
       case first :: rest =>
         try {
+          // TODO: cease typechecking of parent types once one of the parent types expanded into a template
+          // otherwise we might run into troubles with subsequent parent types which don't make sense on their own
+          // and rely on macro types to be transformed into something meaningful
           val supertpts = fixDuplicateSyntheticParents(normalizeFirstParent(
             typedParentType(first, templ, inMixinPosition = false) +:
             (rest map (typedParentType(_, templ, inMixinPosition = true)))))
@@ -1715,7 +1718,7 @@ trait Typers extends Modes with Adaptations with Tags {
           case ex: TypeError =>
             // fallback in case of cyclic errors
             // @H none of the tests enter here but I couldn't rule it out
-            // upd. @E when a definitions inherits itself, we end up here
+            // upd. @E when a definition inherits itself, we end up here
             // because `typedParentType` triggers `initialize` for parent types symbols
             log("Type error calculating parents in template " + templ)
             log("Error: " + ex)
@@ -1840,12 +1843,16 @@ trait Typers extends Modes with Adaptations with Tags {
       assert(clazz != NoSymbol, cdef)
       reenterTypeParams(cdef.tparams)
       val tparams1 = cdef.tparams mapConserve (typedTypeDef)
-      val impl1 = typerReportAnyContextErrors(context.make(cdef.impl, clazz, newScope)) {
-        _.typedTemplate(cdef.impl, parentTypes(cdef.impl))
+      val impl1 = cdef.impl match {
+        case ExpandedIntoTemplate(impl1) => impl1.removeAttachment[MacroExpansionAttachment]
+        case impl => impl
       }
-      val impl2 = finishMethodSynthesis(impl1, clazz, context)
+      val impl2 = typerReportAnyContextErrors(context.make(impl1, clazz, newScope)) {
+        _.typedTemplate(impl1, typedParentTypes(impl1))
+      }
+      val impl3 = finishMethodSynthesis(impl2, clazz, context)
       if (clazz.isTrait && clazz.info.parents.nonEmpty && clazz.info.firstParent.normalize.typeSymbol == AnyClass)
-        checkEphemeral(clazz, impl2.body)
+        checkEphemeral(clazz, impl3.body)
       if ((clazz != ClassfileAnnotationClass) &&
           (clazz isNonBottomSubClass ClassfileAnnotationClass))
         restrictionWarning(cdef.pos, unit,
@@ -1859,7 +1866,7 @@ trait Typers extends Modes with Adaptations with Tags {
             m.moduleClass.addAnnotation(AnnotationInfo(ann.atp, ann.args, List()))
         }
       }
-      treeCopy.ClassDef(cdef, typedMods, cdef.name, tparams1, impl2)
+      treeCopy.ClassDef(cdef, typedMods, cdef.name, tparams1, impl3)
         .setType(NoType)
     }
 
@@ -1885,7 +1892,7 @@ trait Typers extends Modes with Adaptations with Tags {
       )
       val impl1 = typerReportAnyContextErrors(context.make(mdef.impl, clazz, newScope)) {
         _.typedTemplate(mdef.impl, {
-          parentTypes(mdef.impl) ++ (
+          typedParentTypes(mdef.impl) ++ (
             if (noSerializable) Nil
             else {
               clazz.makeSerializable()
