@@ -11,9 +11,14 @@ trait Synthetics {
   self: Context =>
 
   /** Checks whether a definition with a given name (term name for modules, type name for classes)
-   *  exists at top level.
+   *  exists at top level in the sources (user-level or synthetic) comprising the current compilation run.
    */
-  def existsTopLevel(name: Name): Boolean
+  def existsInTrees(name: Name): Boolean
+
+  /** Checks whether a definition with a given name (term name for modules, type name for classes)
+   *  exists at top level on the classpath, i.e. is defined as a non-inner class in a classfile.
+   */
+  def existsOnClassPath(name: Name): Boolean
 
   /** Adds a top-level definition or a list of top-level definitions
    *  to the compiler's symbol table.

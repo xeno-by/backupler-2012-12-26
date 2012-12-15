@@ -16,7 +16,7 @@ trait Synthetics {
 
   import global._
 
-  def existsTopLevel(name: Name): Boolean =
+  private def existingTopLevel(name: Name): Symbol =
     // getClassIfDefined and getModuleIfDefined cannot be used here
     // because they don't work for stuff declared in the empty package
     // (as specified in SLS, code inside non-empty packages cannot see
@@ -26,13 +26,21 @@ trait Synthetics {
     // to be a part of the reflection API and, therefore, they
     // correctly resolve all names
     try {
-      val sym =
-        if (name.isTermName) mirror.staticModule(name.toString)
-        else mirror.staticClass(name.toString)
-      sym != NoSymbol
+      if (name.isTermName) mirror.staticModule(name.toString)
+      else mirror.staticClass(name.toString)
     } catch {
-      case MissingRequirementError(_) => false
+      case MissingRequirementError(_) => NoSymbol
     }
+
+  private def existsAtTopLevel(name: Name)(pathFilter: String => Boolean): Boolean = {
+    val file = existingTopLevel(name).associatedFile
+    val path = if (file != null) file path else null
+    pathFilter(if (path != null) path else "")
+  }
+
+  def existsInTrees(name: Name): Boolean = existsAtTopLevel(name)(path => path.endsWith(".scala"))
+
+  def existsOnClassPath(name: Name): Boolean = existsAtTopLevel(name)(path => path.endsWith(".class"))
 
   def introduceTopLevel(code: Tree): Unit = {
     // TODO: provide a way to specify a pretty name for debugging purposes
