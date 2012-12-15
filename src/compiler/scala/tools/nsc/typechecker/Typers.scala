@@ -1538,48 +1538,50 @@ trait Typers extends Modes with Adaptations with Tags {
      *    (3 times from the typer)
      *    <the same three calls>
      */
-    def typedParentType(encodedtpt: Tree, templ: Template, inMixinPosition: Boolean): Tree = {
-      if (encodedtpt.isErrorTyped) return encodedtpt
+    def typedParentType(encodedtpt: Tree, templ: Template, inMixinPosition: Boolean): Tree = encodedtpt match {
+      case erroneous if erroneous.isErrorTyped => erroneous
+      case ExpandedIntoTree(tree) => tree // TODO: how robust is this?
+                                          // see a discussion at http://groups.google.com/group/scala-internals/browse_thread/thread/471972af1825770f
+      case _ =>
+        val app = treeInfo.dissectApplied(encodedtpt)
+        val (treeInfo.Applied(core, targs, argss), decodedtpt) = (app, app.callee)
+        val argssAreTrivial = argss == Nil || argss == ListOfNil
 
-      val app = treeInfo.dissectApplied(encodedtpt)
-      val (treeInfo.Applied(core, targs, argss), decodedtpt) = (app, app.callee)
-      val argssAreTrivial = argss == Nil || argss == ListOfNil
-
-      // we cannot avoid cyclic references with `initialize` here, because when type macros arrive,
-      // we'll have to check the probe for isTypeMacro anyways.
-      // therefore I think it's reasonable to trade a more specific "inherits itself" error
-      // for a generic, yet understandable "cyclic reference" error
-      val (probe, tpt) = probeTypeConstructor(core)
-      if (probe.isMacroType) {
-        macroExpandParent(this, encodedtpt, tpt, targs, argss, templ, inMixinPosition)
-      } else if (probe.isTrait || inMixinPosition) {
-        if (!argssAreTrivial) {
-          if (probe.isTrait) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
-          else () // a class in a mixin position - this warrants an error in `validateParentClasses`
-                  // therefore here we do nothing, e.g. don't check that the # of ctor arguments
-                  // matches the # of ctor parameters or stuff like that
-        }
-        typedType(decodedtpt)
-      } else {
-        var supertpt = typedTypeConstructor(decodedtpt)
-        val supertparams = if (supertpt.hasSymbol) supertpt.symbol.typeParams else Nil
-        if (supertparams.nonEmpty) {
-          typedPrimaryConstrBody(templ) {
-            val supertpe = PolyType(supertparams, appliedType(supertpt.tpe, supertparams map (_.tpeHK)))
-            val supercall = New(supertpe, mmap(argss)(_.duplicate))
-            val treeInfo.Applied(Select(ctor, nme.CONSTRUCTOR), _, _) = supercall
-            ctor setType supertpe // this is an essential hack, otherwise it will occasionally fail to typecheck
-            atPos(supertpt.pos.focus)(supercall)
-          } match {
-            case EmptyTree => MissingTypeArgumentsParentTpeError(supertpt)
-            case tpt => supertpt = TypeTree(tpt.tpe) setPos supertpt.pos.focus
+        // we cannot avoid cyclic references with `initialize` here, because when type macros arrive,
+        // we'll have to check the probe for isTypeMacro anyways.
+        // therefore I think it's reasonable to trade a more specific "inherits itself" error
+        // for a generic, yet understandable "cyclic reference" error
+        val (probe, tpt) = probeTypeConstructor(core)
+        if (probe.isMacroType) {
+          macroExpandParent(this, encodedtpt, tpt, targs, argss, templ, inMixinPosition)
+        } else if (probe.isTrait || inMixinPosition) {
+          if (!argssAreTrivial) {
+            if (probe.isTrait) ConstrArgsInParentWhichIsTraitError(encodedtpt, probe)
+            else () // a class in a mixin position - this warrants an error in `validateParentClasses`
+                    // therefore here we do nothing, e.g. don't check that the # of ctor arguments
+                    // matches the # of ctor parameters or stuff like that
           }
+          typedType(decodedtpt)
+        } else {
+          var supertpt = typedTypeConstructor(decodedtpt)
+          val supertparams = if (supertpt.hasSymbol) supertpt.symbol.typeParams else Nil
+          if (supertparams.nonEmpty) {
+            typedPrimaryConstrBody(templ) {
+              val supertpe = PolyType(supertparams, appliedType(supertpt.tpe, supertparams map (_.tpeHK)))
+              val supercall = New(supertpe, mmap(argss)(_.duplicate))
+              val treeInfo.Applied(Select(ctor, nme.CONSTRUCTOR), _, _) = supercall
+              ctor setType supertpe // this is an essential hack, otherwise it will occasionally fail to typecheck
+              atPos(supertpt.pos.focus)(supercall)
+            } match {
+              case EmptyTree => MissingTypeArgumentsParentTpeError(supertpt)
+              case tpt => supertpt = TypeTree(tpt.tpe) setPos supertpt.pos.focus
+            }
+          }
+          // this is the place where we tell the typer what argss should be used for the super call
+          // if argss are nullary or empty, then (see the docs for `typedPrimaryConstrBody`)
+          // the super call dummy is already good enough, so we don't need to do anything
+          if (argssAreTrivial) supertpt else supertpt updateAttachment SuperArgsAttachment(argss)
         }
-        // this is the place where we tell the typer what argss should be used for the super call
-        // if argss are nullary or empty, then (see the docs for `typedPrimaryConstrBody`)
-        // the super call dummy is already good enough, so we don't need to do anything
-        if (argssAreTrivial) supertpt else supertpt updateAttachment SuperArgsAttachment(argss)
-      }
     }
 
     /** Typechecks the mishmash of trees that happen to be stuffed into the primary constructor of a given template.
@@ -5305,7 +5307,7 @@ trait Typers extends Modes with Adaptations with Tags {
 
       def typedDocDef(docdef: DocDef) = {
         if (forScaladoc && (sym ne null) && (sym ne NoSymbol)) {
-          val comment = docdef.comment          
+          val comment = docdef.comment
           docComments(sym) = comment
           comment.defineVariables(sym)
           val typer1 = newTyper(context.makeNewScope(tree, context.owner))
