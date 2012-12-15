@@ -13,7 +13,7 @@ object Macros {
             val tpt1 = if (tpt.isEmpty) tpt else AppliedTypeTree(Future, List(tpt))
             val body1 = Apply(future, List(body))
             val name1 = TermName("async" + name.toString.capitalize)
-            DefDef(mods, name1, tparams, vparamss, tpt1, body1).duplicate
+            DefDef(mods, name1, tparams, vparamss, tpt1, body1)
         }
         Template(Nil, emptyValDef, ctor +: defs ::: defs1)
     }

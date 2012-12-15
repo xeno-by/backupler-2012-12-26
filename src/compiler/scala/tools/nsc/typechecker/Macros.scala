@@ -754,7 +754,12 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
         macroExpand1(typer, desugared) match {
           case Success(expanded) =>
             if (allowExpanded(expanded)) {
-              val expanded1 = try onSuccess(expanded) finally popMacroContext()
+              // TODO: duplicate destroys range positions by focusing them
+              // this is done to prevent rangepos invariants from being violated
+              // however we're about to drop the corresponding checks for macro expansions
+              // therefore here we could just write and use a non-destroying duplicator
+              // see a discussion at http://groups.google.com/group/scala-internals/browse_thread/thread/492560d941b315cc
+              val expanded1 = try onSuccess(expanded.duplicate) finally popMacroContext()
               if (!hasMacroExpansionAttachment(expanded1)) linkExpandeeAndExpanded(expandee, expanded1)
               if (allowResult(expanded1)) expanded1 else onFailure(expanded)
             } else {
