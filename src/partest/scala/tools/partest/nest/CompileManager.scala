@@ -160,17 +160,6 @@ class DirectCompiler(val fileManager: FileManager) extends SimpleCompiler {
 
 class CompileManager(val fileManager: FileManager) {
   private def newCompiler = new DirectCompiler(fileManager)
-  def attemptCompile(outdir: Option[File], sources: List[File], kind: String, log: File): CompilationOutcome = {
-    val testPath = sys.props("partest.test-path")
-    val output = sys.props("partest.output")
-    try {
-      sys.props("partest.log") = log.getAbsolutePath
-      sys.props("partest.output") = outdir map (_.getAbsolutePath) getOrElse null
-      newCompiler.compile(outdir, sources, kind, log)
-    } finally {
-      def restoreProp(name: String, value: String): Unit = if (value != null) sys.props.update(name, value) else sys.props.remove(name)
-      restoreProp("partest.test-path", testPath)
-      restoreProp("partest.output", output)
-    }
-  }
+  def attemptCompile(outdir: Option[File], sources: List[File], kind: String, log: File): CompilationOutcome =
+    newCompiler.compile(outdir, sources, kind, log)
 }

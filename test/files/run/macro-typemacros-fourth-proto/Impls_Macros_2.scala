@@ -9,8 +9,9 @@ object Macros {
 
     def connectionString(): String = {
       val Expr(Literal(Constant(sUrl: String))) = url
-      val pristineDb = sys.props("partest.log").dropRight("-run.log".length) + "/" + sUrl + ".h2.db"
-      val workingDb = sys.props("partest.output") + "/" + sUrl + ".h2.db"
+      val currentFile = c.enclosingUnit.source.file.path
+      val pristineDb = new java.io.File(currentFile).getParent + "/" + sUrl + ".h2.db"
+      val workingDb = new java.io.File(currentFile).getParent + "-run.obj/" + sUrl + ".h2.db"
       File.copy(pristineDb, workingDb)
       "jdbc:h2:" + workingDb.dropRight(".h2.db".length)
     }

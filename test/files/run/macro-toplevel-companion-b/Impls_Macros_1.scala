@@ -5,9 +5,9 @@ object Macros {
   def impl(c: Context) = {
     import c.universe._
     val cdef = reify{ class C }.tree
-    if (!c.existsTopLevel(newTypeName("C"))) c.introduceTopLevel(cdef)
+    if (!c.existsAmongTrees(newTypeName("C"))) c.introduceTopLevel(cdef)
     val mdef = reify{ object C }.tree
-    if (!c.existsTopLevel(newTermName("C"))) c.introduceTopLevel(mdef)
+    if (!c.existsAmongTrees(newTermName("C"))) c.introduceTopLevel(mdef)
     Ident(newTypeName("C"))
   }
 

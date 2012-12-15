@@ -12,7 +12,7 @@ object Test extends DirectTest {
       def impl(c: Context) = {
         import c.universe._
         val cdef = reify{ class C }.tree
-        if (!c.existsTopLevel(newTypeName("C"))) c.introduceTopLevel(cdef)
+        if (!c.existsAmongTrees(newTypeName("C"))) c.introduceTopLevel(cdef)
         Ident(newTypeName("C"))
       }
 

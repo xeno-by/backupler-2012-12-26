@@ -1,0 +1,16 @@
+Test_2.scala:6: error: role = TYPE_ROLE, template = List(App)
+  val x1: Foo = new Foo
+          ^
+Test_2.scala:4: error: role = PARENT_ROLE, template = List(Foo)
+  class D1 extends Foo
+                   ^
+Test_2.scala:5: error: role = APPLIED_TYPE_ROLE, template = List(App)
+  type T = Bar()[Int]
+           ^
+Test_2.scala:6: error: role = NEW_ROLE, template = List(App)
+  val x1: Foo = new Foo
+                ^
+Test_2.scala:7: error: role = ANNOTATION_ROLE, template = List(App)
+  @Foo class D2
+   ^
+5 errors found

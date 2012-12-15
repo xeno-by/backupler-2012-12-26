@@ -5288,6 +5288,7 @@ trait Typers extends Modes with Adaptations with Tags {
                 case DependentTypeTree(DependentTypeTree(_, _), _) => super.transform(tree)
                 case DependentTypeTree(AppliedTypeTree(_, _), _) => super.transform(tree)
                 case DependentTypeTree(tpt, args) => treeCopy.DependentTypeTree(tree, tpt1, args)
+                case _ => super.transform(tree)
               }
             }
             reassembler.transform(tree) // do nothing else here - macros in type roles are expanded in adaptType

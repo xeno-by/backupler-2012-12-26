@@ -115,7 +115,8 @@ object PickleFormat {
  *   len is remaining length after `len`.
  */
   val MajorVersion = 5
-  val MinorVersion = 1
+  val MinorVersion = 0 // TODO: change to 1 once everything stabilizes
+  // val MinorVersion = 1
   def VersionString = "V" + MajorVersion + "." + MinorVersion
 
   final val TERMname = 1

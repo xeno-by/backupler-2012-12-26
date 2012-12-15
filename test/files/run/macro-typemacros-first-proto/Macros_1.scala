@@ -6,7 +6,7 @@ object Macros {
     import c.universe._
     val msg = "I've been created from " + c.macroApplication
     val Block(List(synthetic: ClassDef), _) = reify{ trait SomeUniqueName { def hello = c.literal(msg).splice } }.tree
-    if (!c.existsTopLevel(synthetic.name)) c.introduceTopLevel(synthetic)
+    if (!c.existsAmongTrees(synthetic.name)) c.introduceTopLevel(synthetic)
     Ident(synthetic.name)
   }
 
