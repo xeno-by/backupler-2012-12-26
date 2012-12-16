@@ -867,6 +867,9 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     object expander extends MacroExpander[Tree](TERM_ROLE, typer, expandee) {
       override def allowExpandee(expandee: Tree) = expandee.isTerm
       override def onSuccess(expanded: Tree) = {
+        // prematurely annotate the tree with a macro expansion attachment
+        // so that adapt called indirectly by typer.typed knows that it needs to apply the existential fixup
+        linkExpandeeAndExpanded(expandee, expanded)
         var expectedTpe = expandee.tpe
         if (isNullaryInvocation(expandee)) expectedTpe = expectedTpe.finalResultType
         val expanded1 = typer.context.withImplicitsEnabled(typer.typed(expanded, mode, expectedTpe))
