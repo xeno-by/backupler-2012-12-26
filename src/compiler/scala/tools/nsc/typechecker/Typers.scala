@@ -5171,7 +5171,7 @@ trait Typers extends Modes with Adaptations with Tags {
             pre = defSym.owner.thisType
 
           // Inferring classOf type parameter from expected type.
-          if (defSym.isThisSym) {
+          (if (defSym.isThisSym) {
             typed1(This(defSym.owner) setPos tree.pos, mode, pt)
           }
           // Inferring classOf type parameter from expected type.  Otherwise an
@@ -5182,7 +5182,7 @@ trait Typers extends Modes with Adaptations with Tags {
             val tree1 = (
               if (qual == EmptyTree) tree
               // atPos necessary because qualifier might come from startContext
-              else atPos(tree.pos)(Select(qual, name) setAttachments tree.attachments)
+              else atPos(tree.pos)(Select(qual, name))
             )
             val (tree2, pre2) = makeAccessible(tree1, defSym, pre, qual)
             // assert(pre.typeArgs isEmpty) // no need to add #2416-style check here, right?
@@ -5190,7 +5190,7 @@ trait Typers extends Modes with Adaptations with Tags {
             // SI-5967 Important to replace param type A* with Seq[A] when seen from from a reference, to avoid
             //         inference errors in pattern matching.
             tree3 setType dropRepeatedParamType(tree3.tpe)
-          }
+          }) setAttachments tree.attachments
         }
       }
 
