@@ -5230,7 +5230,7 @@ trait Typers extends Modes with Adaptations with Tags {
         } else if (!tpt2.hasSymbol) {
           AppliedTypeNoParametersError(tree, tpt2.tpe)
         } else if (tpt2.symbol.isMacroType) {
-          treeCopy.AppliedTypeTree(tree, tpt2, args) // do nothing here - macros in type roles are expanded in adaptType
+          tree.replace(tpt, tpt2) setType NoType // do nothing here - macros in type roles are expanded in adaptType
         } else {
           val tparams = tpt2.symbol.typeParams
           if (sameLength(tparams, args)) {
@@ -5281,7 +5281,7 @@ trait Typers extends Modes with Adaptations with Tags {
         typed1(tpt, mode | FUNmode, WildcardType) match {
           case tpt1 if tpt1.isErrorTyped => tpt1
           case tpt1 if !tpt1.symbol.isMacroType => DependentTypeNoParametersError(tree, tpt1.tpe)
-          case tpt1 => tree.replace(tpt, tpt1) // do nothing else here - macros in type roles are expanded in adaptType
+          case tpt1 => tree.replace(tpt, tpt1) setType NoType // do nothing else here - macros in type roles are expanded in adaptType
         }
       }
 
