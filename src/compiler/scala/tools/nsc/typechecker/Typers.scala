@@ -5145,7 +5145,7 @@ trait Typers extends Modes with Adaptations with Tags {
             pre = defSym.owner.thisType
 
           // Inferring classOf type parameter from expected type.
-          if (defSym.isThisSym) {
+          (if (defSym.isThisSym) {
             typed1(This(defSym.owner) setPos tree.pos, mode, pt)
           }
           // Inferring classOf type parameter from expected type.  Otherwise an
@@ -5164,7 +5164,7 @@ trait Typers extends Modes with Adaptations with Tags {
             // SI-5967 Important to replace param type A* with Seq[A] when seen from from a reference, to avoid
             //         inference errors in pattern matching.
             tree3 setType dropRepeatedParamType(tree3.tpe)
-          }
+          }) setAttachments tree.attachments
         }
       }
 
