@@ -206,7 +206,7 @@ trait GenTrees {
             val res = mirrorCall(nme.Select, mirrorBuildCall(nme.This, reify(qual.symbol)), reify(name))
             if (reifyDebug) println(s"result: $res")
             res
-          case Select(qual, name) if qual.isTerm && qual.symbol != definitions.PredefModule =>
+          case Select(qual, name) if qual.isTerm && !qual.symbol.isPackage && qual.symbol != definitions.PredefModule =>
             if (reifyDebug) println(s"qualifier is a term: reify as Select($qual, $name)")
             val res = mirrorCall(nme.Select, reify(qual), reify(name))
             if (reifyDebug) println(s"result: $res")
