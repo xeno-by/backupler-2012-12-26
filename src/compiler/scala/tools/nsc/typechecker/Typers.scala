@@ -1123,9 +1123,13 @@ trait Typers extends Modes with Adaptations with Tags {
               tree.symbol != null && tree.symbol.isTermMacro &&   // of a macro
               !tree.attachments.get[SuppressMacroExpansionAttachment.type].isDefined)
             macroExpand(this, tree, mode, pt)
-          else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode))
-            adaptConstrPattern()
-          else if (shouldInsertApply(tree))
+          else if ((mode & (PATTERNmode | FUNmode)) == (PATTERNmode | FUNmode)) {
+            if (tree.symbol != null && tree.symbol.isTermMacro) {
+              val expanded = macroExpand(this, tree, EXPRmode, WildcardType)
+              adapt(expanded, mode, pt, original)
+            } else
+              adaptConstrPattern()
+          } else if (shouldInsertApply(tree))
             insertApply()
           else if (!context.undetparams.isEmpty && !inPolyMode(mode)) { // (9)
             assert(!inHKMode(mode), modeString(mode)) //@M
