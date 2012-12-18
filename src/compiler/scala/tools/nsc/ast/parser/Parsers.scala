@@ -2118,6 +2118,8 @@ self =>
 
 /* -------- PARAMETERS ------------------------------------------- */
 
+    def allowTypelessParams = false
+
     /** {{{
      *  ParamClauses      ::= {ParamClause} [[nl] `(' implicit Params `)']
      *  ParamClause       ::= [nl] `(' [Params] `)'
@@ -2154,7 +2156,7 @@ self =>
         val name = ident()
         var bynamemod = 0
         val tpt =
-          if (settings.YmethodInfer.value && !owner.isTypeName && in.token != COLON) {
+          if (((settings.YmethodInfer.value && !owner.isTypeName) || allowTypelessParams) && in.token != COLON) {
             TypeTree()
           } else { // XX-METHOD-INFER
             accept(COLON)
