@@ -36,6 +36,8 @@ trait Trees extends api.Trees { self: SymbolTable =>
     def isDef = false
 
     def isEmpty = false
+    def nonEmpty = !isEmpty
+
     def canHaveAttrs = true
 
     /** The canonical way to test if a Tree represents a term.
