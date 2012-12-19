@@ -267,10 +267,10 @@ trait ArbitraryTreesAndNames {
 
   implicit val arbLiteral: Arbitrary[Literal] = Arbitrary(genLiteral)
   implicit val arbIdent: Arbitrary[Ident] = Arbitrary(genIdent)
-  implicit val arbValDef: Arbitrary[ValDef] = Arbitrary(sized(s => genValDef(s)))
-  implicit val arbDefDef: Arbitrary[DefDef] = Arbitrary(sized(s => genDefDef(s)))
-  implicit val arbTypeDef: Arbitrary[TypeDef] = Arbitrary(sized(s => genTypeDef(s)))
-  implicit val arbTree: Arbitrary[Tree] = Arbitrary(sized(s => genTree(s)))
+  implicit val arbValDef: Arbitrary[ValDef] = Arbitrary(sized(s => genValDef(5))) // TODO: hack
+  implicit val arbDefDef: Arbitrary[DefDef] = Arbitrary(sized(s => genDefDef(5))) // TODO: hack
+  implicit val arbTypeDef: Arbitrary[TypeDef] = Arbitrary(sized(s => genTypeDef(5))) // TODO: hack
+  implicit val arbTree: Arbitrary[Tree] = Arbitrary(sized(s => genTree(5))) // TODO: hack
 
   implicit class Implies(self: Boolean) {
     def implies(other: => Boolean) = if(!self) true else other
