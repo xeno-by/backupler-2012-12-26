@@ -23,11 +23,14 @@ trait Enclosures {
   // after all we wouldn't save that much time by making them lazy
   val macroApplication: Tree                 = expandee
   val enclosingClass: Tree                   = enclTrees collectFirst { case x: ImplDef => x } getOrElse EmptyTree
-  val enclosingTemplate: Tree                = analyzer.macroExpanderAttachment(expandee).enclosingTemplate orElse
+  def enclosingImpl: ImplDef                 = (enclosingClass orElse (throw new EnclosureException(classOf[ImplDef], enclTrees))).asInstanceOf[ImplDef]
+  val enclosingTemplate0: Tree               = analyzer.macroExpanderAttachment(expandee).enclosingTemplate orElse
                                                (enclTrees collectFirst { case x: Template => x } getOrElse EmptyTree)
+  def enclosingTemplate: Template            = (enclosingTemplate0 orElse (throw new EnclosureException(classOf[Template], enclTrees))).asInstanceOf[Template]
   val enclosingImplicits: List[(Type, Tree)] = site.openImplicits
   val enclosingMacros: List[Context]         = this :: universe.analyzer.openMacros // include self
   val enclosingMethod: Tree                  = site.enclMethod.tree
+  def enclosingDef: DefDef                   = (enclosingMethod orElse (throw new EnclosureException(classOf[DefDef], enclTrees))).asInstanceOf[DefDef]
   val enclosingPosition: Position            = if (enclPoses.isEmpty) NoPosition else enclPoses.head.pos
   val enclosingUnit: CompilationUnit         = universe.currentRun.currentUnit
   val enclosingRun: Run                      = universe.currentRun
