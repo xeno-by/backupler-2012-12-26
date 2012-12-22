@@ -753,7 +753,7 @@ trait Namers extends MethodSynthesis {
         }
         // this early test is there to avoid infinite baseTypes when
         // adding setters and getters --> bug798
-        val needsCycleCheck = (sym.isAliasType || sym.isAbstractType) && !sym.isParameter
+        val needsCycleCheck = (sym.isAliasType && !sym.isMacroType || sym.isAbstractType) && !sym.isParameter
         if (needsCycleCheck && !typer.checkNonCyclic(tree.pos, tp))
           sym setInfo ErrorType
       }
