@@ -75,7 +75,7 @@ object Macros {
       }
     }
 
-    val name = TypeName(c.enclosingClass.asInstanceOf[NameTree].name + "_Generated")
+    val name = TypeName(c.enclosingImpl.name + "_Generated")
     c.introduceTopLevel(ClassDef(NoMods, name, Nil, Template(parents, self, body ++ generateCodeForTables())))
     Ident(name)
   }
