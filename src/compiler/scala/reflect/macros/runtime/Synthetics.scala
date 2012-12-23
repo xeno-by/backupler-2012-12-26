@@ -50,7 +50,8 @@ trait Synthetics {
     val pid = mkPid(packageName.split(java.util.regex.Pattern.quote(".")).toList)
     val code = PackageDef(pid, definitions.toList)
     // TODO: provide a way to specify a pretty name for debugging purposes
-    val filesystemFile = new VirtualFile("macroSynthetic-" + randomUUID().toString.replace("-", "") + ".scala")
+    val fakeJfile = enclosingUnit.source.file.file // compatibility with SBT
+    val filesystemFile = new VirtualFile("macroSynthetic-" + randomUUID().toString.replace("-", "") + ".scala") { override def file = fakeJfile }
     val sourceFile = new BatchSourceFile(filesystemFile, code.toString)
     val unit = new CompilationUnit(sourceFile)
     unit.body = code

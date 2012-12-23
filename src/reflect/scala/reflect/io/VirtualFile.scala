@@ -42,7 +42,7 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
   def absolute = this
 
   /** Returns null. */
-  final def file: JFile = null
+  def file: JFile = null
 
   override def sizeOption: Option[Int] = Some(content.size)
 
