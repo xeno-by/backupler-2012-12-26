@@ -4681,7 +4681,7 @@ trait Typers extends Modes with Adaptations with Tags {
               }
             }
             tree match {
-              case treeInfo.Applied(Select(New(core), nme.CONSTRUCTOR), targs, argss) =>
+              case treeInfo.Applied(Select(New(treeInfo.Applied(core, targs, _)), nme.CONSTRUCTOR), _, argss) =>
                 val (probe, tpt) = probeTypeConstructor(core)
                 if (probe.isMacroType) macroExpandNew(this, tree, tpt, targs, argss, mode)
                 else vanillaTypecheck()
