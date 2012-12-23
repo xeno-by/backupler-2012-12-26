@@ -55,7 +55,8 @@ trait Synthetics {
     // on the one hand, we need to specify some jfile here, otherwise sbt crashes with an NPE
     // on the other hand, we can't specify the obvious enclosingUnit, because then sbt somehow fails to run tests using type macros
     // okay, now let's specify a guaranteedly non-existent file in an existing directory (so that we don't run into permission problems)
-    val fakeJfile = new java.io.File(enclosingUnit.source.file.file.getParent, syntheticFileName)
+    val relatedJfile = enclosingUnit.source.file.file
+    val fakeJfile = if (relatedJfile != null) new java.io.File(relatedJfile.getParent, syntheticFileName) else null
     val virtualFile = new VirtualFile(syntheticFileName) { override def file = fakeJfile }
     val sourceFile = new BatchSourceFile(virtualFile, code.toString)
     val unit = new CompilationUnit(sourceFile)
