@@ -50,9 +50,14 @@ trait Synthetics {
     val pid = mkPid(packageName.split(java.util.regex.Pattern.quote(".")).toList)
     val code = PackageDef(pid, definitions.toList)
     // TODO: provide a way to specify a pretty name for debugging purposes
-    val fakeJfile = enclosingUnit.source.file.file // compatibility with SBT
-    val filesystemFile = new VirtualFile("macroSynthetic-" + randomUUID().toString.replace("-", "") + ".scala") { override def file = fakeJfile }
-    val sourceFile = new BatchSourceFile(filesystemFile, code.toString)
+    val syntheticFileName = "macroSynthetic-" + randomUUID().toString.replace("-", "") + ".scala"
+    // compatibility with SBT
+    // on the one hand, we need to specify some jfile here, otherwise sbt crashes with an NPE
+    // on the other hand, we can't specify the obvious enclosingUnit, because then sbt somehow fails to run tests using type macros
+    // okay, now let's specify a guaranteedly non-existent file in an existing directory (so that we don't run into permission problems)
+    val fakeJfile = new java.io.File(enclosingUnit.source.file.file.getParent, syntheticFileName)
+    val virtualFile = new VirtualFile(syntheticFileName) { override def file = fakeJfile }
+    val sourceFile = new BatchSourceFile(virtualFile, code.toString)
     val unit = new CompilationUnit(sourceFile)
     unit.body = code
     universe.currentRun.compileLate(unit)
