@@ -11,7 +11,7 @@ object Impls {
         println("it works")
       }
     }.tree
-    if (!c.existsAmongTrees(synthetic.name)) c.introduceTopLevel(synthetic)
+    if (!c.existsAmongTrees(synthetic.name)) c.introduceTopLevel(nme.EMPTY_PACKAGE_NAME.toString, synthetic)
     c.universe.Ident(c.universe.TypeName("X"))
   }
 }

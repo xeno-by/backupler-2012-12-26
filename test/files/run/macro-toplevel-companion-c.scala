@@ -5,15 +5,17 @@ object Test extends DirectTest {
   def code = ???
 
   def macros_1 = """
+    package test
+
     import scala.reflect.macros.Context
     import language.experimental.macros
 
     object Macros {
       def impl(c: Context) = {
         import c.universe._
-        val cdef = reify{ class C }.tree
-        if (!c.existsAmongTrees(TypeName("C"))) c.introduceTopLevel(cdef)
-        Ident(TypeName("C"))
+        val Block(List(cdef: ClassDef), _) = reify{ class C }.tree
+        if (!c.existsAmongTrees(TypeName("test.C"))) c.introduceTopLevel("test", cdef)
+        Select(Ident(TermName("test")), TypeName("C"))
       }
 
       type Foo = macro impl
@@ -25,6 +27,7 @@ object Test extends DirectTest {
   }
 
   def test_2 = """
+    package test
     object C extends Macros.Foo
   """
   def compileTest() = {

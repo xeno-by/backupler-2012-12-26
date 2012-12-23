@@ -22,6 +22,8 @@ trait Enclosures {
   // vals are eager to simplify debugging
   // after all we wouldn't save that much time by making them lazy
   val macroApplication: Tree                 = expandee
+  val enclosingPackage0: Tree                = enclTrees collectFirst { case x: PackageDef => x } getOrElse EmptyTree
+  def enclosingPackage: PackageDef           = (enclosingPackage0 orElse (throw new EnclosureException(classOf[PackageDef], enclTrees))).asInstanceOf[PackageDef]
   val enclosingClass: Tree                   = enclTrees collectFirst { case x: ImplDef => x } getOrElse EmptyTree
   def enclosingImpl: ImplDef                 = (enclosingClass orElse (throw new EnclosureException(classOf[ImplDef], enclTrees))).asInstanceOf[ImplDef]
   val enclosingTemplate0: Tree               = analyzer.macroExpanderAttachment(expandee).enclosingTemplate orElse

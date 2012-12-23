@@ -7,7 +7,7 @@ object Impls {
     if (!c.existsAmongTrees(name)) {
       val Block(List(dummy: ClassDef), _) = reify{ class DUMMY }.tree
       val synthetic = ClassDef(NoMods, name, Nil, dummy.impl)
-      c.introduceTopLevel(synthetic)
+      c.introduceTopLevel(nme.EMPTY_PACKAGE_NAME.toString, synthetic)
     }
     Ident(name)
   }

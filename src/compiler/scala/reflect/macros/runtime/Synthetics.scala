@@ -42,18 +42,18 @@ trait Synthetics {
 
   def existsOnClassPath(name: Name): Boolean = existsAtTopLevel(name)(path => path.endsWith(".class"))
 
-  def introduceTopLevel(code: Tree): Unit = {
+  def introduceTopLevel(packageName: String, definitions: ImplDef*): Unit = {
+    def mkPid(fragments: List[String]): RefTree = fragments match {
+      case hd :: Nil => Ident(TermName(hd))
+      case hd :+ tl => Select(mkPid(hd), TermName(tl))
+    }
+    val pid = mkPid(packageName.split(java.util.regex.Pattern.quote(".")).toList)
+    val code = PackageDef(pid, definitions.toList)
     // TODO: provide a way to specify a pretty name for debugging purposes
     val filesystemFile = new VirtualFile("macroSynthetic-" + randomUUID().toString.replace("-", "") + ".scala")
     val sourceFile = new BatchSourceFile(filesystemFile, code.toString)
     val unit = new CompilationUnit(sourceFile)
-    def wrap(code: Tree): Tree = code match {
-      case PackageDef(_, _) => code
-      case ClassDef(_, _, _, _) => wrap(Block(List(code), Literal(Constant(()))))
-      case ModuleDef(_, _, _) => wrap(Block(List(code), Literal(Constant(()))))
-      case Block(cdefs, _) => PackageDef(Ident(nme.EMPTY_PACKAGE_NAME), cdefs)
-    }
-    unit.body = wrap(code)
+    unit.body = code
     universe.currentRun.compileLate(unit)
   }
 }

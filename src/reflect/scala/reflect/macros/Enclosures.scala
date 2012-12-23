@@ -103,6 +103,11 @@ trait Enclosures {
    */
   def enclosingImpl: universe.ImplDef
 
+  /** Tree that corresponds to the enclosing PackageDef tree.
+   *  Throws `EnclosureException` if there's no such enclosing tree.
+   */
+  def enclosingPackage: universe.PackageDef
+
   /** Compilation unit that contains this macro application.
    */
   def enclosingUnit: CompilationUnit

@@ -75,9 +75,10 @@ object Macros {
       }
     }
 
-    val name = c.freshName(c.enclosingImpl.name).toTypeName
-    c.introduceTopLevel(ClassDef(NoMods, name, Nil, Template(parents, self, body ++ generateCodeForTables())))
-    Ident(name)
+    val packageName = c.enclosingPackage.pid.toString
+    val className = c.freshName(c.enclosingImpl.name).toTypeName
+    c.introduceTopLevel(packageName, ClassDef(NoMods, className, Nil, Template(parents, self, body ++ generateCodeForTables())))
+    Select(c.enclosingPackage.pid, className)
   }
 
   type H2Db(url: String) = macro impl

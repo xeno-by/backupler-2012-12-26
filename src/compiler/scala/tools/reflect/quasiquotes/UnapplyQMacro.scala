@@ -107,7 +107,7 @@ abstract class UnapplyQMacro extends Types { self =>
       unapplyResultType,
       unapplyBody)
 
-  val moduleName = TermName(nme.QUASIQUOTE_MATCHER + randomUUID().toString.replace("-", ""))
+  val moduleName = TermName(nme.QUASIQUOTE_MATCHER_NAME + randomUUID().toString.replace("-", ""))
 
   val moduleDef =
     ModuleDef(Modifiers(), moduleName, Template(
@@ -119,9 +119,10 @@ abstract class UnapplyQMacro extends Types { self =>
 
   if (settings.Yquasiquotedebug.value) println(s"moduledef\n=${showRaw(moduleDef, printTypes=true, printIds=true)}\n=$moduleDef\n")
 
-  ctx.introduceTopLevel(moduleDef)
+  ctx.introduceTopLevel(nme.QUASIQUOTE_MATCHER_PACKAGE.toString, moduleDef)
 
-  val result = Apply(Apply(Select(Ident(moduleName), TermName("unapply")), List(universe)), List(unapplySelector))
+  val moduleRef = Select(Ident(nme.QUASIQUOTE_MATCHER_PACKAGE), moduleName)
+  val result = Apply(Apply(Select(moduleRef, TermName("unapply")), List(universe)), List(unapplySelector))
 
   def parse(code: String) = {
     val parser = new {

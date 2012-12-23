@@ -6,8 +6,8 @@ object Macros {
     import c.universe._
     val msg = "I've been created from " + c.macroApplication
     val Block(List(synthetic: ClassDef), _) = reify{ trait SomeUniqueName { def hello = c.literal(msg).splice } }.tree
-    if (!c.existsAmongTrees(synthetic.name)) c.introduceTopLevel(synthetic)
-    Ident(synthetic.name)
+    if (!c.existsAmongTrees(TypeName("test. " + synthetic.name))) c.introduceTopLevel("test", synthetic)
+    Select(Ident(TermName("test")), synthetic.name)
   }
 
   type Foo(x: Int) = macro impl[String]
