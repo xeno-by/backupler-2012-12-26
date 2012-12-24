@@ -855,7 +855,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
         case Ident(_) => Ident(macroName)
       }
       val desugared = atPos(original.pos)(gen.mkApply(macroRef, targs, argss))
-      val desugared1 = prepare(desugared)
+      val desugared1 = unsuppressMacroExpansion(prepare(suppressMacroExpansion(desugared)))
       if (desugared1.isErrorTyped) onFailure(desugared1)
       else super.apply(desugared1)
     }
@@ -888,7 +888,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     val treeInfo.Applied(tpt, targs, argss) = expandee
     object expander extends MacroTypeExpander[Tree](TYPE_ROLE, typer, expandee, tpt, targs, argss) {
       override def isTypeLike = true
-      override def prepare(desugared: Tree) = typer.typed1(desugared, EXPRmode, WildcardType)
+      override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typed(expanded, mode, pt)
       override def allowResult(result: Tree) = allowResultTree(result)
     }
@@ -902,7 +902,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     val treeInfo.Applied(tpt, targs, argss) = expandee
     object expander extends MacroTypeExpander[Tree](APPLIED_TYPE_ROLE, typer, expandee, tpt, targs, argss) {
       override def isTypeLike = true
-      override def prepare(desugared: Tree) = typer.typed1(desugared, EXPRmode, WildcardType)
+      override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typed1(expanded, mode | FUNmode | TAPPmode, WildcardType)
       override def allowResult(result: Tree) = allowResultTree(result)
     }
@@ -916,10 +916,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     object expander extends MacroTypeExpander[Tree](PARENT_ROLE, typer, original, tpt, targs, argss) {
       override def isTemplateLike = true
       override def template = templ
-      override def prepare(desugared: Tree) = {
-        val desugared1 = typer.typedPrimaryConstrBody(templ)(suppressMacroExpansion(desugared))
-        unsuppressMacroExpansion(desugared1)
-      }
+      override def prepare(desugared: Tree) = typer.typedPrimaryConstrBody(templ)(desugared)
       override def onSuccess(expanded: Tree) = {
         val expanded1 = expanded match {
           // AnyRef emitted here is just a dummy that let's the compiler know
@@ -948,7 +945,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
       // TODO: make type macros expanding in new role to behave template-like
       // it kind of makes sense to e.g. let `new TM` expand into `new C { def x = 2 }`
       override def isParentLike = true
-      override def prepare(desugared: Tree) = typer.typed1(desugared, EXPRmode, WildcardType)
+      override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typed(repackApplyAsNew(expanded), mode, WildcardType)
       override def allowResult(result: Tree) = allowResultTree(result)
     }
@@ -963,7 +960,7 @@ trait Macros extends scala.tools.reflect.FastTrack with Traces {
     val argss1 = if (argss == ListOfNil) Nil else argss
     object expander extends MacroTypeExpander[AnnotationInfo](ANNOTATION_ROLE, typer, original, tpt, targs, argss1) {
       override def isParentLike = true
-      override def prepare(desugared: Tree) = typer.typed1(desugared, EXPRmode, WildcardType)
+      override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typedAnnotation(repackApplyAsNew(expanded), mode, selfsym, annClass, requireJava)
       override def onFailure(expanded: Tree) = { typer.infer.setError(original); ErroneousAnnotation }
       override def allowResult(result: AnnotationInfo) = allowResultAnn(result)
