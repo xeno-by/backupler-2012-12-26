@@ -255,6 +255,12 @@ MISCELLANEOUS
 ============================================================================ -->
 
   <target name="pack-all.done" depends="pack-archives.done, pack-maven.done"/>
+  <target name="pack-all-macro-paradise.done" depends="pack-archives.done, pack-maven.done">
+    <replace dir="${dists.dir}/maven/${version.number}" value="&lt;groupId&gt;org.scala-lang.macro-paradise&lt;/groupId&gt;">
+      <include name="**/*-pom.xml"/>
+      <replacetoken><![CDATA[<groupId>org.scala-lang</groupId>]]></replacetoken>
+    </replace>
+  </target>
 
 <!-- ===========================================================================
 MISCELLANEOUS

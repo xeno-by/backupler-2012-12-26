@@ -2952,6 +2952,23 @@ FORWARDED TARGETS FOR NIGHTLY BUILDS
     </antcall>
   </target>
 
+  <target name="nightly-macro-paradise">
+    <antcall target="nightly-nopt-macro-paradise">
+      <param name="scalac.args.optimise" value="-optimise"/>
+    </antcall>
+  </target>
+
+  <target name="nightly-nopt-macro-paradise" depends="all.done, docs.all">
+    <!-- cannot antcall all.done, the properties defined in there (dist.dir) are not returned. need depends. -->
+    <ant antfile="${src.dir}/build/pack.xml" target="pack-all-macro-paradise.done" inheritall="yes" inheritrefs="yes"/>
+  </target>
+
+  <target name="nightly-macro-paradise.checkall">
+    <antcall target="nightly-nopt-macro-paradise">
+      <param name="partest.scalacopts" value="-Ycheck:all"/>
+    </antcall>
+  </target>
+
 <!-- ===========================================================================
 POSITIONS
 ============================================================================ -->
