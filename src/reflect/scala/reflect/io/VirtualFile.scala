@@ -62,6 +62,9 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
   /** Is this abstract file a directory? */
   def isDirectory: Boolean = false
 
+  /** @inheritdoc */
+  override def isVirtual: Boolean = true
+
   /** Returns the time that this abstract file was last modified. */
   private var _lastModified: Long = 0
   def lastModified: Long = _lastModified
