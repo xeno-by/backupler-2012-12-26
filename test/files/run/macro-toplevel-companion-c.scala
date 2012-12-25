@@ -14,7 +14,7 @@ object Test extends DirectTest {
       def impl(c: Context) = {
         import c.universe._
         val Block(List(cdef: ClassDef), _) = reify{ class C }.tree
-        if (!c.existsAmongTrees(newTypeName("test.C"))) c.introduceTopLevel("test", cdef)
+        if (!c.existsAmongTrees(TypeName("test.C"))) c.introduceTopLevel("test", cdef)
         c.literalUnit
       }
 
